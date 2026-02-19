@@ -1,0 +1,30 @@
+export interface Game {
+  ID: string;
+  Title: string;
+  Platform: string;
+  normalizedPlatform: string;
+  Developer: string;
+  Publisher: string;
+  Genre: string;
+  ReleaseDate: string;
+  Notes: string;
+  Source: string;
+  Series: string;
+  PlayMode: string;
+  Rating: string;
+  MaxPlayers: string;
+  CommunityStarRating: number;
+  StarRating: number;
+  Status: string;
+  Favorite: boolean;
+  DatabaseID: string;
+  Hide: boolean;
+  Broken: boolean;
+  PlayCount: number;
+  PlayTime: number;
+  LastPlayedDate: string;
+  DateAdded: string;
+  Installed: boolean;
+  Completed: boolean;
+  Progress: string;
+}
