@@ -84,7 +84,7 @@ On WSL, this is typically `/mnt/d/LaunchBox` or similar.
 
 Search the game library by title. Uses fuzzy matching (Fuse.js) on Title and Series fields.
 
-Each result includes: id, title, platform, genre, release date, developer, source, installed status, play time, and a confidence score (0-1, higher is better).
+Each result includes: id, title, platform, installed status, play time, and a confidence score (0-1, higher is better). Use `get_game_details` for full metadata.
 
 | Parameter  | Type   | Required | Description                          |
 |------------|--------|----------|--------------------------------------|

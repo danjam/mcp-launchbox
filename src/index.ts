@@ -52,7 +52,7 @@ server.registerTool(
   "search_games",
   {
     title: "Search Games",
-    description: "Search the LaunchBox game library by title. Returns compact results with id, title, platform, genre, developer, installed status, play time, and a confidence score. Use the id from results to call get_game_details for full metadata.",
+    description: "Search the LaunchBox game library by title. Returns compact results with id, title, platform, installed status, play time, and a confidence score. Use the id from results to call get_game_details for full metadata.",
     inputSchema: {
       query: z.string().describe("Search text to match against game titles"),
       platform: z.string().optional().describe("Filter by platform name (e.g. 'Windows', 'Arcade')"),
@@ -79,10 +79,6 @@ server.registerTool(
       id: r.item.ID,
       title: r.item.Title,
       platform: r.item.Platform,
-      genre: r.item.Genre,
-      releaseDate: r.item.ReleaseDate,
-      developer: r.item.Developer,
-      source: r.item.Source,
       installed: r.item.Installed,
       playTime: r.item.PlayTime,
       confidence: Math.round((1 - (r.score ?? 0)) * 100) / 100,
