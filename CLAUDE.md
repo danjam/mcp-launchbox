@@ -36,7 +36,7 @@ MCP server for querying a local [LaunchBox](https://www.launchbox-app.com/) game
 
 ## Notes
 
-- Fuse.js threshold is 0.45 — tuned for OCR/typo tolerance without too much noise
+- Fuse.js threshold is 0.3 with `ignoreLocation: true` — tuned for accurate matching with typo tolerance and no positional penalty for mid-title matches
 
 ## Build & Run
 

@@ -17,7 +17,8 @@ const FUSE_OPTIONS: IFuseOptions<Game> = {
     { name: "Title", weight: 1 },
     { name: "Series", weight: 0.5 },
   ],
-  threshold: 0.45,
+  threshold: 0.3,
+  ignoreLocation: true,
   includeScore: true,
 };
 
