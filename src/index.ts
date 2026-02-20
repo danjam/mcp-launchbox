@@ -22,15 +22,37 @@ const FUSE_OPTIONS: IFuseOptions<Game> = {
   includeScore: true,
 };
 
+const FUSE_TITLE_ONLY_OPTIONS: IFuseOptions<Game> = {
+  keys: [{ name: "Title", weight: 1 }],
+  threshold: 0.3,
+  ignoreLocation: true,
+  includeScore: true,
+};
+
 let gamesById: Map<string, Game>;
+let gamesByTitle: Map<string, Game[]>;
 let games: Game[];
 let fuse: Fuse<Game>;
+let fuseTitleOnly: Fuse<Game>;
 
 async function load() {
   const result = await loadGames(launchboxPath!);
   gamesById = result.gamesById;
   games = result.games;
   fuse = new Fuse(games, FUSE_OPTIONS);
+  fuseTitleOnly = new Fuse(games, FUSE_TITLE_ONLY_OPTIONS);
+
+  gamesByTitle = new Map();
+  for (const g of games) {
+    const key = g.Title.toLowerCase();
+    let list = gamesByTitle.get(key);
+    if (!list) {
+      list = [];
+      gamesByTitle.set(key, list);
+    }
+    list.push(g);
+  }
+
   return games.length;
 }
 
@@ -89,6 +111,100 @@ server.registerTool(
         {
           type: "text" as const,
           text: JSON.stringify({ total: results.length, showing: limited.length, results: items }),
+        },
+      ],
+    };
+  }
+);
+
+server.registerTool(
+  "check_library",
+  {
+    title: "Check Library",
+    description:
+      "Check which games from a list are already in the library. Accepts an array of game titles and returns matches for each. Designed for bundle duplicate checking — replaces calling search_games per title. Omit platform to check across all platforms (recommended for bundles).",
+    inputSchema: {
+      games: z
+        .array(z.string())
+        .min(1)
+        .max(100)
+        .describe("Array of game title strings to look up (1-100)"),
+      platform: z
+        .string()
+        .optional()
+        .describe("Filter matches to a specific platform"),
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
+  async ({ games: titles, platform }) => {
+    const CONFIDENCE_THRESHOLD = 0.85;
+    const platformFilter = platform?.toLowerCase();
+
+    const results = titles.map((query) => {
+      // Fast path: exact title match
+      let candidates = gamesByTitle.get(query.toLowerCase());
+
+      if (candidates) {
+        if (platformFilter) {
+          candidates = candidates.filter(
+            (g) => g.normalizedPlatform === platformFilter
+          );
+        }
+        return {
+          query,
+          matches: candidates.map((g) => ({
+            id: g.ID,
+            title: g.Title,
+            platform: g.Platform,
+            installed: g.Installed,
+            playTime: g.PlayTime,
+            confidence: 1.0,
+          })),
+        };
+      }
+
+      // Slow path: fuzzy search (title only)
+      let fuzzyResults = fuseTitleOnly.search(query);
+
+      if (platformFilter) {
+        fuzzyResults = fuzzyResults.filter(
+          (r) => r.item.normalizedPlatform === platformFilter
+        );
+      }
+
+      const matches = fuzzyResults
+        .filter((r) => 1 - (r.score ?? 0) >= CONFIDENCE_THRESHOLD)
+        .map((r) => ({
+          id: r.item.ID,
+          title: r.item.Title,
+          platform: r.item.Platform,
+          installed: r.item.Installed,
+          playTime: r.item.PlayTime,
+          confidence: Math.round((1 - (r.score ?? 0)) * 100) / 100,
+        }));
+
+      return { query, matches };
+    });
+
+    const owned = results.filter((r) => r.matches.length > 0).length;
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify({
+            results,
+            summary: {
+              total: titles.length,
+              owned,
+              new: titles.length - owned,
+            },
+          }),
         },
       ],
     };

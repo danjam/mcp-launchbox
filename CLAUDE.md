@@ -24,6 +24,7 @@ MCP server for querying a local [LaunchBox](https://www.launchbox-app.com/) game
 - `search_games` — fuzzy search on Title and Series fields, optional platform filter, configurable limit; includes confidence score, installed status, and play time per result
 - `get_game_details` — full metadata lookup by game ID (UUID); includes play data (PlayCount, PlayTime, LastPlayedDate, DateAdded, Installed, Completed, Progress, StarRating); excludes `normalizedPlatform`; Notes omitted by default (opt-in via `include_notes`)
 - `list_platforms` — lists all platforms with game counts
+- `check_library` — batch ownership check: accepts an array of game titles and returns matches for each; exact-match fast path with fuzzy fallback at 0.85 confidence threshold; optional platform filter (omit to check all platforms)
 - `find_duplicates` — finds games owned on multiple platforms, grouped by title
 - `get_stats` — library summary: total games, total platforms, top 10 platforms
 - `reload_library` — re-read all XML from disk and rebuild indexes without restarting

@@ -7,6 +7,7 @@ Search your entire game collection across all platforms (Steam, GOG, Epic, emula
 ## Features
 
 - **Search games** — fuzzy text search across your full library, tolerant of typos and OCR errors, with confidence scores
+- **Check library** — batch ownership check: pass a list of game titles and instantly see which ones you already own
 - **Get game details** — full metadata plus play data (play time, play count, last played, installed, completed, progress, personal rating)
 - **List platforms** — see all platforms in your library with game counts
 - **Find duplicates** — discover games you own on multiple platforms
@@ -91,6 +92,17 @@ Each result includes: id, title, platform, installed status, play time, and a co
 | `query`    | string | yes      | Search text to match against titles  |
 | `platform` | string | no       | Filter by platform name              |
 | `limit`    | number | no       | Max results to return (default 25)   |
+
+### `check_library`
+
+Check which games from a list are already in the library. Designed for bundle duplicate checking — pass all the titles in one call instead of searching one at a time. Omit `platform` to check across all platforms (recommended for bundles).
+
+Returns matches with confidence scores and a summary of how many you own vs. how many are new.
+
+| Parameter  | Type     | Required | Description                                |
+|------------|----------|----------|--------------------------------------------|
+| `games`    | string[] | yes      | Array of game title strings to look up (1-100) |
+| `platform` | string   | no       | Filter matches to a specific platform      |
 
 ### `get_game_details`
 
