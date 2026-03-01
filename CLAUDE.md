@@ -1,46 +1,75 @@
 # CLAUDE.md
 
-## Project
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-MCP server for querying a local [LaunchBox](https://www.launchbox-app.com/) game library. Exposes game search and lookup tools over stdio.
+## Build and Run
 
-## Stack
+```bash
+npm install      # Install dependencies (also runs tsc via prepare)
+npm run build    # Compile TypeScript (tsc)
+npm start        # Run server (node dist/index.js)
+```
 
-- TypeScript (ESM, Node 18+)
-- MCP SDK (`@modelcontextprotocol/sdk`) — stdio transport
-- Fuse.js — fuzzy search
-- fast-xml-parser — XML ingestion
+Unit tests via `node:test` (built-in), linting via [Biome](https://biomejs.dev/):
+
+```bash
+npm test            # Build + run tests
+npm run test:only   # Run tests without rebuilding
+npm run lint        # Check for issues
+npm run lint:fix    # Auto-fix issues
+```
+
+## Environment
+
+- `LAUNCHBOX_DATA_PATH` — Required. Path to your LaunchBox root directory (the folder containing `Data/Platforms/`).
+
+## Manual Testing
+
+Pipe JSON-RPC messages to stdin:
+```bash
+printf '{"jsonrpc":"2.0","id":1,"method":"initialize"}\n{"jsonrpc":"2.0","id":2,"method":"tools/list"}\n' | LAUNCHBOX_DATA_PATH=/mnt/d/LaunchBox node dist/index.js
+```
 
 ## Architecture
 
+This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox game library. It communicates over **stdin/stdout using JSON-RPC 2.0** — there is no HTTP server or MCP SDK dependency.
+
+**Source files:**
+- `src/index.ts` — Entrypoint: I/O helpers (`send`, `reply`, `textReply`, `error`), env var check, library loading, request dispatch, readline listener
+- `src/handlers.ts` — `createHandlers(state, reload)` factory returning a handler map; uses `ok`/`fail` helpers for `ToolResult`; all 7 tool handler functions
+- `src/tools.ts` — Tool schema definitions (static JSON Schema data for MCP `tools/list`)
+- `src/loader.ts` — XML parsing, game extraction, string interning (`loadGames`); Fuse.js index building (`buildLibrary`)
+- `src/types.ts` — All type definitions: `Game`, `RequestId`, `ToolResult`, `ToolHandler`, MCP interfaces
+
+**Request flow:** stdin line → JSON parse → `handleRequest` dispatches by MCP method (`initialize`, `tools/list`, `tools/call`) → `handleToolCall` looks up handler in map → handler returns `ToolResult` → dispatch maps result to JSON-RPC response on stdout.
+
+**Data loading:**
 - LaunchBox stores game data as XML files in `Data/Platforms/` (one file per platform)
 - All XML is parsed and loaded into memory at startup (async parallel I/O)
-- In-memory index: `Map<id, Game>` for O(1) lookup, Fuse.js index for fuzzy search
+- In-memory index: `Map<id, Game>` for O(1) lookup, Fuse.js indexes for fuzzy search
 - String interning on repetitive fields (Platform, Developer, Genre, etc.) to reduce memory
-- `LAUNCHBOX_DATA_PATH` env var points to the LaunchBox root directory
+- `buildLibrary()` returns a `Library` object held in a mutable `state` ref so `reload_library` can swap it
 
-## MCP Tools
+**Tools exposed:** `search_games`, `check_library`, `get_game_details`, `list_platforms`, `find_duplicates`, `get_stats`, `reload_library`.
 
-- `search_games` — fuzzy search on Title and Series fields, optional platform filter, configurable limit; includes confidence score, installed status, and play time per result
-- `get_game_details` — full metadata lookup by game ID (UUID); includes play data (PlayCount, PlayTime, LastPlayedDate, DateAdded, Installed, Completed, Progress, StarRating); excludes `normalizedPlatform`; Notes omitted by default (opt-in via `include_notes`)
-- `list_platforms` — lists all platforms with game counts
-- `check_library` — batch ownership check: accepts an array of game titles and returns matches for each; exact-match fast path with fuzzy fallback at 0.85 confidence threshold; optional platform filter (omit to check all platforms)
-- `find_duplicates` — finds games owned on multiple platforms, grouped by title
-- `get_stats` — library summary: total games, total platforms, top 10 platforms
-- `reload_library` — re-read all XML from disk and rebuild indexes without restarting
+**Key dependencies:** `fast-xml-parser` for XML parsing, `fuse.js` for fuzzy search.
 
-## Key Files
+## Project Config
 
-- `src/index.ts` — MCP server setup, tool registration, Fuse.js config
-- `src/loader.ts` — XML parsing, game extraction, string interning
-- `src/types.ts` — `Game` interface
+- ES modules (`"type": "module"` in package.json)
+- TypeScript strict mode (`verbatimModuleSyntax`, `noUncheckedIndexedAccess`, `noFallthroughCasesInSwitch`), target ES2022, module NodeNext
+- Output to `dist/`, source in `src/`
+- Executable as CLI via shebang (`#!/usr/bin/env node`) and `"bin"` field
+
+## Code Style
+
+Biome enforces: single quotes, trailing commas, 2-space indent, 120 char line width. Run `npm run lint:fix` to auto-format.
 
 ## Notes
 
 - Fuse.js threshold is 0.3 with `ignoreLocation: true` — tuned for accurate matching with typo tolerance and no positional penalty for mid-title matches
 
-## Build & Run
+## Gotchas
 
-- `npm run build` compiles to `dist/` — the `prepare` script runs this automatically on install
-- `bin` entry points to `dist/index.js` for `npx` usage
-- `npm run dev` uses tsx for development without compiling
+- **Import extensions**: NodeNext module resolution requires `.js` extensions in imports (e.g., `import { foo } from './bar.js'`), even though source files are `.ts`.
+- **Tests are plain JS**: Test files in `test/` are `.js` and import from `../dist/`. Run `npm run build` first (or use `npm test` which builds automatically).
