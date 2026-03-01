@@ -1,5 +1,10 @@
+*.log
 .claude/
+.DS_Store
+.env
+.idea/
 .mcp.json
 .vscode/
-node_modules/
 dist/
+node_modules/
+Thumbs.db

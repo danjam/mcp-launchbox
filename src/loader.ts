@@ -1,13 +1,14 @@
-import { readFile, readdir } from "node:fs/promises";
-import { join } from "node:path";
-import { XMLParser } from "fast-xml-parser";
-import type { Game } from "./types.js";
+import { readFile, readdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { XMLParser } from 'fast-xml-parser';
+import Fuse, { type IFuseOptions } from 'fuse.js';
+import type { Game } from './types.js';
 
 const stringCache = new Map<string, string>();
 
 function intern(val: unknown): string {
   const str = toStr(val);
-  if (str === "") return "";
+  if (str === '') return '';
   const cached = stringCache.get(str);
   if (cached !== undefined) return cached;
   stringCache.set(str, str);
@@ -15,11 +16,11 @@ function intern(val: unknown): string {
 }
 
 function toBool(val: unknown): boolean {
-  return val === true || val === "true";
+  return val === true || val === 'true';
 }
 
 function toStr(val: unknown): string {
-  if (val === undefined || val === null || val === "") return "";
+  if (val === undefined || val === null || val === '') return '';
   return String(val);
 }
 
@@ -68,17 +69,17 @@ export async function loadGames(launchboxPath: string): Promise<{
 }> {
   stringCache.clear();
 
-  const platformsDir = join(launchboxPath, "Data", "Platforms");
+  const platformsDir = join(launchboxPath, 'Data', 'Platforms');
 
   let files: string[];
   try {
     const allFiles = await readdir(platformsDir);
-    files = allFiles.filter((f) => f.endsWith(".xml"));
+    files = allFiles.filter((f) => f.endsWith('.xml'));
   } catch (error: unknown) {
     const code = (error as NodeJS.ErrnoException).code;
-    if (code === "ENOENT") {
+    if (code === 'ENOENT') {
       throw new Error(
-        `Platforms directory not found at ${platformsDir}. Ensure LAUNCHBOX_DATA_PATH points to a valid LaunchBox installation.`
+        `Platforms directory not found at ${platformsDir}. Ensure LAUNCHBOX_DATA_PATH points to a valid LaunchBox installation.`,
       );
     }
     throw new Error(`Failed to read platforms directory ${platformsDir}: ${error}`);
@@ -86,15 +87,15 @@ export async function loadGames(launchboxPath: string): Promise<{
 
   const parser = new XMLParser({
     ignoreAttributes: true,
-    isArray: (_tagName: string, jPath: string) => jPath === "LaunchBox.Game",
+    isArray: (_tagName: string, jPath: string) => jPath === 'LaunchBox.Game',
   });
 
   const fileResults = await Promise.all(
     files.map(async (file) => {
-      const xml = await readFile(join(platformsDir, file), "utf-8");
+      const xml = await readFile(join(platformsDir, file), 'utf-8');
       const parsed = parser.parse(xml);
       return (parsed?.LaunchBox?.Game ?? []) as Record<string, unknown>[];
-    })
+    }),
   );
 
   const gamesById = new Map<string, Game>();
@@ -115,3 +116,41 @@ export async function loadGames(launchboxPath: string): Promise<{
 
   return { gamesById, games };
 }
+
+const FUSE_OPTIONS: IFuseOptions<Game> = {
+  keys: [
+    { name: 'Title', weight: 1 },
+    { name: 'Series', weight: 0.5 },
+  ],
+  threshold: 0.3,
+  ignoreLocation: true,
+  includeScore: true,
+};
+
+const FUSE_TITLE_ONLY_OPTIONS: IFuseOptions<Game> = {
+  keys: [{ name: 'Title', weight: 1 }],
+  threshold: 0.3,
+  ignoreLocation: true,
+  includeScore: true,
+};
+
+export async function buildLibrary(launchboxPath: string) {
+  const { gamesById, games } = await loadGames(launchboxPath);
+  const fuse = new Fuse(games, FUSE_OPTIONS);
+  const fuseTitleOnly = new Fuse(games, FUSE_TITLE_ONLY_OPTIONS);
+
+  const gamesByTitle = new Map<string, Game[]>();
+  for (const g of games) {
+    const key = g.Title.toLowerCase();
+    let list = gamesByTitle.get(key);
+    if (!list) {
+      list = [];
+      gamesByTitle.set(key, list);
+    }
+    list.push(g);
+  }
+
+  return { gamesById, gamesByTitle, games, fuse, fuseTitleOnly };
+}
+
+export type Library = Awaited<ReturnType<typeof buildLibrary>>;
