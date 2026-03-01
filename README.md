@@ -1,38 +1,35 @@
-# mcp-launchbox
+# MCP LaunchBox
 
-An MCP server for querying your [LaunchBox](https://www.launchbox-app.com/) game library.
+An [MCP](https://modelcontextprotocol.io/) server that lets AI assistants query your [LaunchBox](https://www.launchbox-app.com/) game library. Search your entire game collection across all platforms (Steam, GOG, Epic, emulators, etc.) directly from your AI assistant.
 
-Search your entire game collection across all platforms (Steam, GOG, Epic, emulators, etc.) directly from your AI assistant. No more accidentally buying games you already own.
+Works with Claude Desktop, Claude Code, or any MCP-compatible client.
 
-## Features
-
-- **Search games** — fuzzy text search across your full library, tolerant of typos and OCR errors, with confidence scores
-- **Check library** — batch ownership check: pass a list of game titles and instantly see which ones you already own
-- **Get game details** — full metadata plus play data (play time, play count, last played, installed, completed, progress, personal rating)
-- **List platforms** — see all platforms in your library with game counts
-- **Find duplicates** — discover games you own on multiple platforms
-- **Library stats** — quick summary of your collection
-- **Reload library** — refresh game data from disk without restarting the server
+---
 
 ## Use Cases
 
-- Send a screenshot of a game bundle and check which ones you already own
+- Send a screenshot of a game bundle and check which ones you already own — fuzzy matching handles OCR errors and typos
 - Quick lookups before buying a game on sale
 - Browse your library by platform or name
 - Check how much time you've spent on a game
 - Find installed games you haven't played yet
 - See what you're currently playing across platforms
 
+---
+
 ## Setup
 
-### Prerequisites
+Requires [Node.js](https://nodejs.org/) 18+.
 
-- Node.js 18+
-- A [LaunchBox](https://www.launchbox-app.com/) installation with game data
+### 1. Have a LaunchBox Installation
 
-### Quick Start (no clone needed)
+You'll need [LaunchBox](https://www.launchbox-app.com/) installed with your game data.
 
-Add to your `.mcp.json` (Claude Code) or Claude Desktop config:
+### 2. Configure Your MCP Client
+
+Add the server to your MCP client's configuration. There are two ways to do this:
+
+**Option A: Run directly from GitHub (no install needed)**
 
 ```json
 {
@@ -48,9 +45,7 @@ Add to your `.mcp.json` (Claude Code) or Claude Desktop config:
 }
 ```
 
-This pulls and builds directly from GitHub — no local clone required.
-
-### From Source
+**Option B: Clone and run locally**
 
 ```bash
 git clone https://github.com/danjam/mcp-launchbox.git
@@ -58,15 +53,14 @@ cd mcp-launchbox
 npm install
 ```
 
-Then configure with a local path:
+Then point your MCP client at the local build:
 
 ```json
 {
   "mcpServers": {
     "launchbox": {
       "command": "node",
-      "args": ["dist/index.js"],
-      "cwd": "/path/to/mcp-launchbox",
+      "args": ["/path/to/mcp-launchbox/dist/index.js"],
       "env": {
         "LAUNCHBOX_DATA_PATH": "/path/to/LaunchBox"
       }
@@ -75,76 +69,79 @@ Then configure with a local path:
 }
 ```
 
-Set `LAUNCHBOX_DATA_PATH` to your LaunchBox root directory (the folder containing `Data/Platforms/`).
+Replace `/path/to/mcp-launchbox` with the actual path where you cloned the project.
 
-On WSL, this is typically `/mnt/d/LaunchBox` or similar.
+---
 
-## MCP Tools
+## What You Can Do
 
-### `search_games`
+### Search Games
 
-Search the game library by title. Uses fuzzy matching (Fuse.js) on Title and Series fields.
+Search the game library by title. Uses fuzzy matching across title and series fields.
 
 Each result includes: id, title, platform, installed status, play time, and a confidence score (0-1, higher is better). Use `get_game_details` for full metadata.
 
-| Parameter  | Type   | Required | Description                          |
-|------------|--------|----------|--------------------------------------|
-| `query`    | string | yes      | Search text to match against titles  |
-| `platform` | string | no       | Filter by platform name              |
-| `limit`    | number | no       | Max results to return (default 25)   |
+Tool: `search_games`
 
-### `check_library`
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | Yes | Search text to match against titles |
+| `platform` | string | No | Filter by platform name |
+| `limit` | number | No | Max results to return (default 25) |
 
-Check which games from a list are already in the library. Designed for bundle duplicate checking — pass all the titles in one call instead of searching one at a time. Omit `platform` to check across all platforms (recommended for bundles).
+### Check Library
 
-Returns matches with confidence scores and a summary of how many you own vs. how many are new.
+Check which games from a list are already in the library. Designed for bundle duplicate checking — pass all the titles in one call instead of searching one at a time. Omit `platform` to check across all platforms (recommended for bundles). Returns matches with confidence scores and a summary of how many you own vs. how many are new.
 
-| Parameter  | Type     | Required | Description                                |
-|------------|----------|----------|--------------------------------------------|
-| `games`    | string[] | yes      | Array of game title strings to look up (1-100) |
-| `platform` | string   | no       | Filter matches to a specific platform      |
+Tool: `check_library`
 
-### `get_game_details`
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `games` | string[] | Yes | Array of game title strings to look up (1-100) |
+| `platform` | string | No | Filter matches to a specific platform |
+
+### Get Game Details
 
 Get full details for a specific game by its ID. Returns metadata (title, platform, developer, publisher, genre, release date, series, etc.) and play data (play count, play time, last played, date added, installed, completed, progress, personal rating).
 
-| Parameter       | Type    | Required | Description                            |
-|-----------------|---------|----------|----------------------------------------|
-| `id`            | string  | yes      | The game ID (UUID from search results) |
-| `include_notes` | boolean | no       | Include the Notes field (default false) |
+Tool: `get_game_details`
 
-### `list_platforms`
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string | Yes | The game ID (UUID from search results) |
+| `include_notes` | boolean | No | Include the Notes field (default false) |
 
-List all platforms in the library with their game counts.
+### List Platforms
 
-No parameters.
+List all platforms in the library with their game counts. No parameters needed.
 
-### `find_duplicates`
+Tool: `list_platforms`
+
+### Find Duplicates
 
 Find games owned on multiple platforms, grouped by title.
 
-| Parameter | Type   | Required | Description                              |
-|-----------|--------|----------|------------------------------------------|
-| `query`   | string | no       | Optional title filter (fuzzy match)      |
-| `limit`   | number | no       | Max duplicate groups to return (default 25) |
+Tool: `find_duplicates`
 
-### `get_stats`
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | No | Optional title filter (fuzzy match) |
+| `limit` | number | No | Max duplicate groups to return (default 25) |
 
-Get library summary statistics (total games, total platforms, top 10 platforms by game count).
+### Get Stats
 
-No parameters.
+Get library summary statistics (total games, total platforms, top 10 platforms by game count). No parameters needed.
 
-### `reload_library`
+Tool: `get_stats`
 
-Reload all game data from disk. Use after adding or removing games in LaunchBox.
+### Reload Library
 
-No parameters.
+Reload all game data from disk. Use after adding or removing games in LaunchBox. No parameters needed.
 
-## Development
+Tool: `reload_library`
 
-```bash
-npm run dev      # Run via tsx (live TypeScript)
-npm start        # Run compiled JS
-npm run build    # Compile TypeScript
-npx tsc --noEmit # Type-check only
-```
+---
+
+## License
+
+[MIT](LICENSE)
