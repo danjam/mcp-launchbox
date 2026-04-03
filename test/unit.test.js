@@ -375,20 +375,28 @@ describe('utils', () => {
       assert.equal(asInt(10, 25), 10);
     });
 
-    it('returns error string for non-integer', () => {
-      assert.equal(typeof asInt('fifty', 25), 'string');
+    it('returns fail result for non-integer', () => {
+      const result = asInt('fifty', 25);
+      assert.notEqual(typeof result, 'number');
+      assert.equal(result.ok, false);
     });
 
-    it('returns error string for zero', () => {
-      assert.equal(typeof asInt(0, 25), 'string');
+    it('returns fail result for zero', () => {
+      const result = asInt(0, 25);
+      assert.notEqual(typeof result, 'number');
+      assert.equal(result.ok, false);
     });
 
-    it('returns error string for negative', () => {
-      assert.equal(typeof asInt(-5, 25), 'string');
+    it('returns fail result for negative', () => {
+      const result = asInt(-5, 25);
+      assert.notEqual(typeof result, 'number');
+      assert.equal(result.ok, false);
     });
 
-    it('returns error string for float', () => {
-      assert.equal(typeof asInt(2.5, 25), 'string');
+    it('returns fail result for float', () => {
+      const result = asInt(2.5, 25);
+      assert.notEqual(typeof result, 'number');
+      assert.equal(result.ok, false);
     });
   });
 
