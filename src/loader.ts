@@ -84,6 +84,9 @@ export async function loadGames(platformsPath: string): Promise<{
         `Platforms directory not found at ${platformsPath}. Ensure LAUNCHBOX_PLATFORMS_PATH points to a valid platforms directory.`,
       );
     }
+    if (code === 'ENOTDIR') {
+      throw new Error(`${platformsPath} is a file, not a directory. LAUNCHBOX_PLATFORMS_PATH must point to a directory.`);
+    }
     throw new Error(`Failed to read platforms directory ${platformsPath}: ${error}`);
   }
 
