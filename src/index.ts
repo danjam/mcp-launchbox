@@ -63,6 +63,7 @@ async function handleToolCall(id: RequestId, name: string, args: Record<string, 
       errorReply(id, result.message);
     }
   } catch (e) {
+    console.error(`Error in tool handler ${name}:`, e);
     errorReply(id, e instanceof Error ? e.message : 'Internal error');
   }
 }
