@@ -115,25 +115,33 @@ export async function loadGames(platformsPath: string): Promise<{
 
   const gamesById = new Map<string, Game>();
   const games: Game[] = [];
+  let skipped = 0;
 
   for (const rawGames of fileResults) {
     for (const raw of rawGames) {
       const game = extractGame(raw);
       if (!game.ID) {
         console.warn(`Game "${game.Title}" on ${game.Platform} has no ID — skipping`);
+        skipped++;
         continue;
       }
       if (!game.Title) {
         console.warn(`Game ${game.ID} on ${game.Platform} has no title — skipping`);
+        skipped++;
         continue;
       }
       if (gamesById.has(game.ID)) {
         console.warn(`Duplicate game ID "${game.ID}" (${game.Title}) — skipping`);
+        skipped++;
         continue;
       }
       gamesById.set(game.ID, game);
       games.push(game);
     }
+  }
+
+  if (skipped > 0) {
+    console.warn(`Skipped ${skipped} games (no ID, no title, or duplicate ID)`);
   }
 
   stringCache.clear();

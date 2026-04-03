@@ -50,10 +50,12 @@ export function createHandlers(
     if (titles.length > maxTitles) return fail(`Too many titles (${titles.length}), max is ${maxTitles}`);
     const platform = asString(args.platform);
     if (typeof platform === 'object') return platform;
+    // High threshold — check_library is for bundle duplicate checking, so
+    // false positives (claiming you own a game you don't) are worse than misses
     const CONFIDENCE_THRESHOLD = 0.85;
 
     const results = titles.map((query) => {
-      // Fast path: exact title match
+      // Fast path: case-insensitive title match
       let candidates = state.library.gamesByTitle.get(query.toLowerCase());
 
       if (candidates) {
