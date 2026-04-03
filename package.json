@@ -15,8 +15,8 @@
     "start": "node dist/index.js",
     "lint": "biome check src/",
     "lint:fix": "biome check --write src/",
-    "test": "npm run build && node --test test/",
-    "test:only": "node --test test/"
+    "test": "npm run build && node --test 'test/**/*.test.js'",
+    "test:only": "node --test 'test/**/*.test.js'"
   },
   "dependencies": {
     "fast-xml-parser": "^5.3.6",
