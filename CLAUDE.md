@@ -35,19 +35,20 @@ printf '{"jsonrpc":"2.0","id":1,"method":"initialize"}\n{"jsonrpc":"2.0","id":2,
 This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox game library. It communicates over **stdin/stdout using JSON-RPC 2.0** — there is no HTTP server or MCP SDK dependency.
 
 **Source files:**
-- `src/index.ts` — Entrypoint: I/O helpers (`send`, `reply`, `textReply`, `error`), env var check, library loading, request dispatch, readline listener
-- `src/handlers.ts` — `createHandlers(state, reload)` factory returning a handler map; uses `ok`/`fail` helpers for `ToolResult`; all 7 tool handler functions
-- `src/tools.ts` — Tool schema definitions (static JSON Schema data for MCP `tools/list`)
-- `src/loader.ts` — XML parsing, game extraction, string interning (`loadGames`); Fuse.js index building (`buildLibrary`)
+- `src/index.ts` — Entrypoint: I/O helpers (`send`, `reply`, `textReply`, `errorReply`, `error`), env var check, library loading, request dispatch, readline listener
+- `src/handlers.ts` — `createHandlers(state, reload)` factory returning `Record<ToolName, ToolHandler>`; private helpers (`ok`, `fail`, `fuseConfidence`, `compactResult`, `sortedPlatformCounts`); all 7 tool handler functions
+- `src/tools.ts` — Tool schema definitions (`as const satisfies MCPToolDefinition[]`); derives `ToolName` union type for type-safe handler map
+- `src/loader.ts` — XML parsing, game extraction, string interning (`loadGames`); Fuse.js index building (`buildLibrary`); exports `FUSE_OPTIONS` and `FUSE_TITLE_ONLY_OPTIONS`
 - `src/types.ts` — All type definitions: `Game`, `RequestId`, `ToolResult`, `ToolHandler`, MCP interfaces
 
 **Request flow:** stdin line → JSON parse → `handleRequest` dispatches by MCP method (`initialize`, `tools/list`, `tools/call`) → `handleToolCall` looks up handler in map → handler returns `ToolResult` → dispatch maps result to JSON-RPC response on stdout.
 
 **Data loading:**
-- LaunchBox stores game data as XML files in `Data/Platforms/` (one file per platform)
+- `LAUNCHBOX_PLATFORMS_PATH` points directly at the directory containing platform XML files (one file per platform)
 - All XML is parsed and loaded into memory at startup (async parallel I/O)
+- Duplicate game IDs are skipped (first entry wins) with a warning logged to stderr
 - In-memory index: `Map<id, Game>` for O(1) lookup, Fuse.js indexes for fuzzy search
-- String interning on repetitive fields (Platform, Developer, Genre, etc.) to reduce memory
+- String interning on repetitive fields (Platform, Developer, Genre, etc.) to reduce memory; cache cleared after loading
 - `buildLibrary()` returns a `Library` object held in a mutable `state` ref so `reload_library` can swap it
 
 **Tools exposed:** `search_games`, `check_library`, `get_game_details`, `list_platforms`, `find_duplicates`, `get_stats`, `reload_library`.
