@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import Fuse, { type IFuseOptions } from 'fuse.js';
 import type { Game } from './types.js';
+import { sortedPlatformCounts } from './utils.js';
 
 const stringCache = new Map<string, string>();
 
@@ -181,7 +182,9 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
     list.push(g);
   }
 
-  return { gamesById, gamesByTitle, games, fuse, fuseTitleOnly };
+  const platformCounts = sortedPlatformCounts(games);
+
+  return { gamesById, gamesByTitle, games, fuse, fuseTitleOnly, platformCounts };
 }
 
 export interface Library {
@@ -190,4 +193,5 @@ export interface Library {
   readonly games: readonly Game[];
   readonly fuse: Fuse<Game>;
   readonly fuseTitleOnly: Fuse<Game>;
+  readonly platformCounts: readonly { platform: string; count: number }[];
 }

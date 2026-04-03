@@ -6,6 +6,7 @@ import { createHandlers } from '../dist/handlers.js';
 import { FUSE_OPTIONS, FUSE_TITLE_ONLY_OPTIONS } from '../dist/loader.js';
 import { asInt, asString, compactResult, fail, fuseConfidence, ok, requireString, sortedPlatformCounts } from '../dist/utils.js';
 
+
 /** @returns {import('../dist/types.js').Game[]} */
 function mockGames() {
   return [
@@ -115,7 +116,8 @@ function mockLibrary() {
   }
   const fuse = new Fuse(games, FUSE_OPTIONS);
   const fuseTitleOnly = new Fuse(games, FUSE_TITLE_ONLY_OPTIONS);
-  return { gamesById, gamesByTitle, games, fuse, fuseTitleOnly };
+  const platformCounts = sortedPlatformCounts(games);
+  return { gamesById, gamesByTitle, games, fuse, fuseTitleOnly, platformCounts };
 }
 
 function setup() {

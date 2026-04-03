@@ -43,7 +43,7 @@ console.error(`Loading games from ${platformsPath}...`);
 let library: Library;
 try {
   library = await buildLibrary(platformsPath!);
-  console.error(`Loaded ${library.games.length} games across ${new Set(library.games.map((g) => g.Platform)).size} platforms`);
+  console.error(`Loaded ${library.games.length} games across ${library.platformCounts.length} platforms`);
 } catch (e) {
   console.error(`Failed to load games: ${e}`);
   process.exit(1);

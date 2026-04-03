@@ -9,7 +9,6 @@ import {
   fuseConfidence,
   ok,
   requireString,
-  sortedPlatformCounts,
 } from './utils.js';
 
 function matchesPlatform(gamePlatform: string, filter: string): boolean {
@@ -105,7 +104,7 @@ export function createHandlers(
   }
 
   function handleListPlatforms(): ToolResult {
-    return ok(JSON.stringify(sortedPlatformCounts(state.library.games)));
+    return ok(JSON.stringify(state.library.platformCounts));
   }
 
   function handleFindDuplicates(args: Record<string, unknown>): ToolResult {
@@ -147,7 +146,7 @@ export function createHandlers(
   }
 
   function handleGetStats(): ToolResult {
-    const platforms = sortedPlatformCounts(state.library.games);
+    const platforms = state.library.platformCounts;
 
     const stats = {
       totalGames: state.library.games.length,
@@ -168,7 +167,7 @@ export function createHandlers(
       JSON.stringify({
         reloaded: true,
         games: state.library.games.length,
-        platforms: sortedPlatformCounts(state.library.games).length,
+        platforms: state.library.platformCounts.length,
       }),
     );
   }
