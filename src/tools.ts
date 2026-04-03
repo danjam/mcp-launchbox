@@ -14,6 +14,7 @@ export const tools = [
       },
       required: ['query'],
     },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: 'check_library',
@@ -33,6 +34,7 @@ export const tools = [
       },
       required: ['games'],
     },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: 'get_game_details',
@@ -46,6 +48,7 @@ export const tools = [
       },
       required: ['id'],
     },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: 'list_platforms',
@@ -55,6 +58,7 @@ export const tools = [
       type: 'object',
       properties: {},
     },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: 'find_duplicates',
@@ -66,6 +70,7 @@ export const tools = [
         limit: { type: 'integer', description: 'Max duplicate groups to return (default 25)' },
       },
     },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: 'get_stats',
@@ -74,6 +79,7 @@ export const tools = [
       type: 'object',
       properties: {},
     },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: 'reload_library',
@@ -82,6 +88,7 @@ export const tools = [
       type: 'object',
       properties: {},
     },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   },
 ] as const satisfies MCPToolDefinition[];
 
