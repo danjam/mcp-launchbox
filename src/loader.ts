@@ -92,6 +92,8 @@ export async function loadGames(platformsPath: string): Promise<{
 
   const parser = new XMLParser({
     ignoreAttributes: true,
+    htmlEntities: true,
+    // Ensures Game is always an array even for single-game platform files
     isArray: (_tagName: string, jPath: string) => jPath === 'LaunchBox.Game',
   });
 
