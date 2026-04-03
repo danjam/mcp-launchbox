@@ -118,6 +118,10 @@ export async function loadGames(platformsPath: string): Promise<{
         console.warn(`Game "${game.Title}" on ${game.Platform} has no ID — skipping`);
         continue;
       }
+      if (!game.Title) {
+        console.warn(`Game ${game.ID} on ${game.Platform} has no title — skipping`);
+        continue;
+      }
       if (gamesById.has(game.ID)) {
         console.warn(`Duplicate game ID "${game.ID}" (${game.Title}) — skipping`);
         continue;
