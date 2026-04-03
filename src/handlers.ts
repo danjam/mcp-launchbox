@@ -1,49 +1,28 @@
 import type { Library } from './loader.js';
 import type { ToolName } from './tools.js';
-import type { Game, ToolHandler, ToolResult } from './types.js';
-
-function ok(text: string): ToolResult {
-  return { ok: true, text };
-}
-
-function fail(message: string): ToolResult {
-  return { ok: false, message };
-}
-
-function fuseConfidence(score: number | undefined): number {
-  return Math.round((1 - (score ?? 0)) * 100) / 100;
-}
-
-function compactResult(game: Game, confidence: number) {
-  return {
-    id: game.ID,
-    title: game.Title,
-    platform: game.Platform,
-    installed: game.Installed,
-    playTime: game.PlayTime,
-    confidence,
-  };
-}
-
-function sortedPlatformCounts(games: Game[]): { platform: string; count: number }[] {
-  const counts = new Map<string, number>();
-  for (const g of games) {
-    counts.set(g.Platform, (counts.get(g.Platform) ?? 0) + 1);
-  }
-  return [...counts.entries()]
-    .map(([platform, count]) => ({ platform, count }))
-    .sort((a, b) => b.count - a.count);
-}
+import type { ToolHandler, ToolResult } from './types.js';
+import {
+  asInt,
+  asString,
+  compactResult,
+  fail,
+  fuseConfidence,
+  ok,
+  requireString,
+  sortedPlatformCounts,
+} from './utils.js';
 
 export function createHandlers(
   state: { library: Library },
   reload: () => Promise<void>,
 ): Record<ToolName, ToolHandler> {
   async function handleSearchGames(args: Record<string, unknown>): Promise<ToolResult> {
-    const query = args.query as string | undefined;
-    if (!query) return fail('query is required');
-    const platform = args.platform as string | undefined;
-    const limit = (args.limit as number | undefined) ?? 25;
+    const query = requireString('query', args.query);
+    if (typeof query !== 'string') return query;
+    const platform = asString(args.platform);
+    if (args.platform !== undefined && platform === undefined) return fail('platform must be a string');
+    const limit = asInt(args.limit, 25);
+    if (typeof limit === 'string') return fail(limit);
 
     let results = state.library.fuse.search(query);
 
@@ -60,9 +39,14 @@ export function createHandlers(
   }
 
   async function handleCheckLibrary(args: Record<string, unknown>): Promise<ToolResult> {
-    const titles = args.games as string[] | undefined;
-    if (!titles || !Array.isArray(titles) || titles.length === 0) return fail('games is required (array of strings)');
-    const platform = args.platform as string | undefined;
+    const titles = args.games;
+    if (!Array.isArray(titles) || titles.length === 0 || !titles.every((t) => typeof t === 'string'))
+      return fail('games is required (array of strings)');
+    const maxTitles = asInt(args.limit, 100);
+    if (typeof maxTitles === 'string') return fail(maxTitles);
+    if (titles.length > maxTitles) return fail(`Too many titles (${titles.length}), max is ${maxTitles}`);
+    const platform = asString(args.platform);
+    if (args.platform !== undefined && platform === undefined) return fail('platform must be a string');
     const CONFIDENCE_THRESHOLD = 0.85;
     const platformFilter = platform?.toLowerCase();
 
@@ -105,9 +89,9 @@ export function createHandlers(
   }
 
   async function handleGetGameDetails(args: Record<string, unknown>): Promise<ToolResult> {
-    const id = args.id as string | undefined;
-    if (!id) return fail('id is required');
-    const includeNotes = (args.include_notes as boolean | undefined) ?? false;
+    const id = requireString('id', args.id);
+    if (typeof id !== 'string') return id;
+    const includeNotes = args.include_notes === undefined ? false : args.include_notes === true;
 
     const game = state.library.gamesById.get(id);
     if (!game) return fail(`Game not found: ${id}`);
@@ -149,8 +133,10 @@ export function createHandlers(
   }
 
   async function handleFindDuplicates(args: Record<string, unknown>): Promise<ToolResult> {
-    const query = args.query as string | undefined;
-    const limit = (args.limit as number | undefined) ?? 25;
+    const query = asString(args.query);
+    if (args.query !== undefined && query === undefined) return fail('query must be a string');
+    const limit = asInt(args.limit, 25);
+    if (typeof limit === 'string') return fail(limit);
 
     let source = state.library.games;
     if (query) {
