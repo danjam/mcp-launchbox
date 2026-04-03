@@ -12,6 +12,10 @@ import {
   sortedPlatformCounts,
 } from './utils.js';
 
+function matchesPlatform(gamePlatform: string, filter: string): boolean {
+  return gamePlatform.toLowerCase() === filter.toLowerCase();
+}
+
 export function createHandlers(
   state: { library: Library },
   reload: () => Promise<void>,
@@ -27,8 +31,7 @@ export function createHandlers(
     let results = state.library.fuse.search(query);
 
     if (platform) {
-      const p = platform.toLowerCase();
-      results = results.filter((r) => r.item.Platform.toLowerCase() === p);
+      results = results.filter((r) => matchesPlatform(r.item.Platform, platform));
     }
 
     const limited = results.slice(0, limit);
@@ -48,15 +51,14 @@ export function createHandlers(
     const platform = asString(args.platform);
     if (typeof platform === 'object') return platform;
     const CONFIDENCE_THRESHOLD = 0.85;
-    const platformFilter = platform?.toLowerCase();
 
     const results = titles.map((query) => {
       // Fast path: exact title match
       let candidates = state.library.gamesByTitle.get(query.toLowerCase());
 
       if (candidates) {
-        if (platformFilter) {
-          candidates = candidates.filter((g) => g.Platform.toLowerCase() === platformFilter);
+        if (platform) {
+          candidates = candidates.filter((g) => matchesPlatform(g.Platform, platform));
         }
         return {
           query,
@@ -67,8 +69,8 @@ export function createHandlers(
       // Slow path: fuzzy search (title only)
       let fuzzyResults = state.library.fuseTitleOnly.search(query);
 
-      if (platformFilter) {
-        fuzzyResults = fuzzyResults.filter((r) => r.item.Platform.toLowerCase() === platformFilter);
+      if (platform) {
+        fuzzyResults = fuzzyResults.filter((r) => matchesPlatform(r.item.Platform, platform));
       }
 
       const matches = fuzzyResults.flatMap((r) => {
