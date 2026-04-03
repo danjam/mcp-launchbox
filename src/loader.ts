@@ -24,9 +24,14 @@ function toStr(val: unknown): string {
   return String(val);
 }
 
-function toNum(val: unknown): number {
+function toNum(val: unknown, field?: string): number {
+  if (val === undefined || val === null || val === '') return 0;
   const n = Number(val);
-  return Number.isNaN(n) ? 0 : n;
+  if (Number.isNaN(n)) {
+    console.warn(`Non-numeric value ${JSON.stringify(val)} in field ${field ?? 'unknown'} — defaulting to 0`);
+    return 0;
+  }
+  return n;
 }
 
 function extractGame(raw: Record<string, unknown>): Game {
@@ -45,15 +50,15 @@ function extractGame(raw: Record<string, unknown>): Game {
     PlayMode: intern(raw.PlayMode),
     Rating: intern(raw.Rating),
     MaxPlayers: intern(raw.MaxPlayers),
-    CommunityStarRating: toNum(raw.CommunityStarRating),
-    StarRating: toNum(raw.StarRatingFloat), // StarRatingFloat for decimal precision, not StarRating
+    CommunityStarRating: toNum(raw.CommunityStarRating, 'CommunityStarRating'),
+    StarRating: toNum(raw.StarRatingFloat, 'StarRatingFloat'),
     Status: intern(raw.Status),
     Favorite: toBool(raw.Favorite),
     DatabaseID: toStr(raw.DatabaseID),
     Hide: toBool(raw.Hide),
     Broken: toBool(raw.Broken),
-    PlayCount: toNum(raw.PlayCount),
-    PlayTime: toNum(raw.PlayTime),
+    PlayCount: toNum(raw.PlayCount, 'PlayCount'),
+    PlayTime: toNum(raw.PlayTime, 'PlayTime'),
     LastPlayedDate: toStr(raw.LastPlayedDate),
     DateAdded: toStr(raw.DateAdded),
     Installed: toBool(raw.Installed),
