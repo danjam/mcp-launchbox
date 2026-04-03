@@ -51,7 +51,7 @@ try {
 const handlers = createHandlers(state, reload);
 
 async function handleToolCall(id: RequestId, name: string, args: Record<string, unknown>): Promise<void> {
-  if (!(name in handlers)) {
+  if (!Object.hasOwn(handlers, name)) {
     error(id, -32601, `Unknown tool: ${name}`);
     return;
   }
