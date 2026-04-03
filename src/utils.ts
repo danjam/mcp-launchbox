@@ -29,7 +29,10 @@ export function fuseConfidence(score: number | undefined): number {
   return Math.round((1 - (score ?? 0)) * 100) / 100;
 }
 
-export function compactResult(game: Game, confidence: number) {
+export function compactResult(
+  game: Game,
+  confidence: number,
+): { id: string; title: string; platform: string; installed: boolean; playTime: number; confidence: number } {
   return {
     id: game.ID,
     title: game.Title,
