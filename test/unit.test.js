@@ -177,6 +177,11 @@ describe('search_games', () => {
     const result = await handlers.search_games({});
     assert.equal(result.ok, false);
   });
+
+  it('rejects non-string platform', async () => {
+    const result = await handlers.search_games({ query: 'test', platform: 123 });
+    assert.equal(result.ok, false);
+  });
 });
 
 describe('get_game_details', () => {
@@ -311,6 +316,21 @@ describe('check_library', () => {
     assert.equal(result.ok, false);
     if (!result.ok) assert.match(result.message, /Too many titles/);
   });
+
+  it('rejects empty games array', async () => {
+    const result = await handlers.check_library({ games: [] });
+    assert.equal(result.ok, false);
+  });
+
+  it('rejects mixed-type games array', async () => {
+    const result = await handlers.check_library({ games: ['valid', 123] });
+    assert.equal(result.ok, false);
+  });
+
+  it('rejects non-string platform', async () => {
+    const result = await handlers.check_library({ games: ['test'], platform: 42 });
+    assert.equal(result.ok, false);
+  });
 });
 
 describe('find_duplicates', () => {
@@ -335,6 +355,11 @@ describe('find_duplicates', () => {
       const parsed = JSON.parse(result.text);
       assert.equal(parsed.length, 0);
     }
+  });
+
+  it('rejects non-string query', async () => {
+    const result = await handlers.find_duplicates({ query: 999 });
+    assert.equal(result.ok, false);
   });
 });
 
