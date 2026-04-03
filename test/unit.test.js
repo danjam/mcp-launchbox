@@ -137,7 +137,7 @@ describe('search_games', () => {
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.ok(parsed.total >= 1);
+      assert.equal(parsed.total, 2);
       assert.equal(parsed.results[0].title, 'Half-Life 2');
     }
   });
@@ -182,6 +182,21 @@ describe('search_games', () => {
     const result = await handlers.search_games({ query: 'test', platform: 123 });
     assert.equal(result.ok, false);
   });
+
+  it('returns empty results for no matches', async () => {
+    const result = await handlers.search_games({ query: 'zzz_nonexistent_zzz' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.total, 0);
+      assert.equal(parsed.results.length, 0);
+    }
+  });
+
+  it('rejects invalid limit at handler level', async () => {
+    const result = await handlers.search_games({ query: 'test', limit: 0 });
+    assert.equal(result.ok, false);
+  });
 });
 
 describe('get_game_details', () => {
@@ -204,6 +219,15 @@ describe('get_game_details', () => {
     if (result.ok) {
       const parsed = JSON.parse(result.text);
       assert.equal(parsed.Notes, 'Classic FPS');
+    }
+  });
+
+  it('excludes notes for non-boolean include_notes', async () => {
+    const result = await handlers.get_game_details({ id: 'aaa-111', include_notes: 'true' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.Notes, undefined);
     }
   });
 
@@ -245,7 +269,7 @@ describe('get_stats', () => {
       const parsed = JSON.parse(result.text);
       assert.equal(parsed.totalGames, 3);
       assert.equal(parsed.totalPlatforms, 2);
-      assert.ok(parsed.topPlatforms.length > 0);
+      assert.equal(parsed.topPlatforms.length, 2);
     }
   });
 });
@@ -260,7 +284,9 @@ describe('check_library', () => {
       const parsed = JSON.parse(result.text);
       assert.equal(parsed.results[0].matches.length, 2);
       assert.equal(parsed.results[0].matches[0].confidence, 1.0);
+      assert.equal(parsed.summary.total, 1);
       assert.equal(parsed.summary.owned, 1);
+      assert.equal(parsed.summary.new, 0);
     }
   });
 
@@ -279,7 +305,7 @@ describe('check_library', () => {
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.ok(parsed.results[0].matches.length >= 1);
+      assert.equal(parsed.results[0].matches.length, 2);
       assert.ok(parsed.results[0].matches[0].confidence < 1.0);
       assert.ok(parsed.results[0].matches[0].confidence >= 0.85);
     }
@@ -408,26 +434,26 @@ describe('utils', () => {
 
     it('returns fail result for non-integer', () => {
       const result = asInt('fifty', 25);
-      assert.notEqual(typeof result, 'number');
       assert.equal(result.ok, false);
     });
 
     it('returns fail result for zero', () => {
       const result = asInt(0, 25);
-      assert.notEqual(typeof result, 'number');
       assert.equal(result.ok, false);
     });
 
     it('returns fail result for negative', () => {
       const result = asInt(-5, 25);
-      assert.notEqual(typeof result, 'number');
       assert.equal(result.ok, false);
     });
 
     it('returns fail result for float', () => {
       const result = asInt(2.5, 25);
-      assert.notEqual(typeof result, 'number');
       assert.equal(result.ok, false);
+    });
+
+    it('accepts numeric strings (coerces to number)', () => {
+      assert.equal(asInt('10', 25), 10);
     });
   });
 
@@ -457,17 +483,17 @@ describe('utils', () => {
 
     it('returns fail for undefined', () => {
       const result = requireString('x', undefined);
-      assert.notEqual(typeof result, 'string');
+      assert.equal(result.ok, false);
     });
 
     it('returns fail for empty string', () => {
       const result = requireString('x', '');
-      assert.notEqual(typeof result, 'string');
+      assert.equal(result.ok, false);
     });
 
     it('returns fail for non-string', () => {
       const result = requireString('x', 123);
-      assert.notEqual(typeof result, 'string');
+      assert.equal(result.ok, false);
     });
   });
 
