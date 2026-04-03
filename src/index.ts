@@ -71,9 +71,11 @@ function handleRequest(req: MCPRequest): void {
   switch (req.method) {
     case 'initialize':
       reply(id, {
-        protocolVersion: '2024-11-05',
+        protocolVersion: '2025-11-25',
         serverInfo: { name: 'mcp-launchbox', version: '1.0.0' },
         capabilities: { tools: {} },
+        instructions:
+          'Search and browse a local LaunchBox game library. Use when looking up games, checking platform collections, finding duplicates, or getting library statistics.',
       });
       break;
     case 'tools/list':
