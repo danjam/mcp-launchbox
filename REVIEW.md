@@ -15,16 +15,16 @@ Full codebase review — 20 agents across 2 passes.
 
 ## Medium
 
-- [ ] **No JSON-RPC structural validation** — `src/index.ts:119-121`: `JSON.parse(line)` assigned to `MCPRequest` with no runtime check. Non-object JSON (e.g. `42`, `"hello"`, `[1,2,3]`) silently disappears via `req.id == null`. Add `typeof raw !== 'object' || raw === null` guard returning `-32600 Invalid Request`.
-- [ ] **Unsafe state cast** — `src/index.ts:35`: `{} as { library: Library }` — `state.library` is `undefined` until `reload()` completes. Restructure: `const library = await buildLibrary(...); const state = { library };`.
-- [ ] **`asString` conflates "not provided" with "wrong type"** — `src/utils.ts:17-20`: Returns `undefined` for both. Requires fragile two-step guard at every call site (repeated 3 times). Should return `ToolResult` on type mismatch like `asInt` does.
-- [ ] **JSON-RPC error codes are magic numbers** — `src/index.ts:55,89,96,101,112,124`: `-32601`, `-32602`, `-32603`, `-32700` scattered as raw literals. Named constants would prevent typos and clarify intent.
-- [ ] **Wrong error code for unknown tool** — `src/index.ts:55`: Uses `-32601` (Method Not Found) but the method IS `tools/call` — the unknown entity is a tool name within params. Should be `-32602` (Invalid Params).
-- [ ] **`name in handlers` allows prototype keys** — `src/index.ts:54`: `in` checks the prototype chain. `__proto__`, `constructor`, `toString` bypass the unknown-tool guard. `handlers["constructor"](args)` calls `Object` as a function. Fix: `Object.hasOwn(handlers, name)`.
-- [ ] **No `process.stdout` error handler** — `src/index.ts:16`: Broken pipe (client disconnect) causes unhandled `EPIPE` error on stdout, crashing the process. Add `process.stdout.on('error', ...)`.
-- [ ] **XML with wrong root element silently returns 0 games** — `src/loader.ts:95`: A file with `<Root><Game>...</Game></Root>` instead of `<LaunchBox><Game>` parses successfully but `parsed?.LaunchBox?.Game` is undefined, returns `[]`. Entire platform silently missing with no warning.
-- [ ] **`check_library` limit enforcement untested** — `src/handlers.ts:47`.
-- [ ] **Handler type-validation paths untested** — Non-string `platform`/`query`, empty arrays, mixed-type arrays across `search_games`, `check_library`, `find_duplicates`.
+- [x] **No JSON-RPC structural validation** — `src/index.ts:119-121`: `JSON.parse(line)` assigned to `MCPRequest` with no runtime check. Non-object JSON (e.g. `42`, `"hello"`, `[1,2,3]`) silently disappears via `req.id == null`. Add `typeof raw !== 'object' || raw === null` guard returning `-32600 Invalid Request`.
+- [x] **Unsafe state cast** — `src/index.ts:35`: `{} as { library: Library }` — `state.library` is `undefined` until `reload()` completes. Restructure: `const library = await buildLibrary(...); const state = { library };`.
+- [x] **`asString` conflates "not provided" with "wrong type"** — `src/utils.ts:17-20`: Returns `undefined` for both. Requires fragile two-step guard at every call site (repeated 3 times). Should return `ToolResult` on type mismatch like `asInt` does.
+- [x] **JSON-RPC error codes are magic numbers** — `src/index.ts:55,89,96,101,112,124`: `-32601`, `-32602`, `-32603`, `-32700` scattered as raw literals. Named constants would prevent typos and clarify intent.
+- [x] **Wrong error code for unknown tool** — `src/index.ts:55`: Uses `-32601` (Method Not Found) but the method IS `tools/call` — the unknown entity is a tool name within params. Should be `-32602` (Invalid Params).
+- [x] **`name in handlers` allows prototype keys** — `src/index.ts:54`: `in` checks the prototype chain. `__proto__`, `constructor`, `toString` bypass the unknown-tool guard. `handlers["constructor"](args)` calls `Object` as a function. Fix: `Object.hasOwn(handlers, name)`.
+- [x] **No `process.stdout` error handler** — `src/index.ts:16`: Broken pipe (client disconnect) causes unhandled `EPIPE` error on stdout, crashing the process. Add `process.stdout.on('error', ...)`.
+- [x] **XML with wrong root element silently returns 0 games** — `src/loader.ts:95`: A file with `<Root><Game>...</Game></Root>` instead of `<LaunchBox><Game>` parses successfully but `parsed?.LaunchBox?.Game` is undefined, returns `[]`. Entire platform silently missing with no warning.
+- [x] **`check_library` limit enforcement untested** — `src/handlers.ts:47`.
+- [x] **Handler type-validation paths untested** — Non-string `platform`/`query`, empty arrays, mixed-type arrays across `search_games`, `check_library`, `find_duplicates`.
 
 ## Low
 
