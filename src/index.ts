@@ -90,11 +90,18 @@ function handleRequest(req: MCPRequest): void {
         error(id, -32602, 'Missing required parameter: name');
         break;
       }
-      handleToolCall(id, name, (req.params?.arguments ?? {}) as Record<string, unknown>).catch((e) => {
+      const rawArgs = req.params?.arguments ?? {};
+      if (typeof rawArgs !== 'object' || rawArgs === null || Array.isArray(rawArgs)) {
+        error(id, -32602, 'Invalid parameter: arguments must be an object');
+        break;
+      }
+      handleToolCall(id, name, rawArgs as Record<string, unknown>).catch((e) => {
         console.error(`Unhandled error in tool call ${name}:`, e);
         try {
           error(id, -32603, 'Internal error');
-        } catch {}
+        } catch (writeErr) {
+          console.error(`Failed to write error response for tool call ${name}:`, writeErr);
+        }
       });
       break;
     }
