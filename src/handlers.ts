@@ -1,6 +1,6 @@
 import type { Library } from './loader.js';
 import type { ToolName } from './tools.js';
-import type { ToolHandler, ToolResult } from './types.js';
+import type { Game, ToolHandler, ToolResult } from './types.js';
 import {
   asInt,
   asString,
@@ -139,9 +139,12 @@ export function createHandlers(
     const limit = asInt(args.limit, 25);
     if (typeof limit !== 'number') return limit;
 
-    let source = state.library.games;
+    let source: readonly Game[] = state.library.games;
     if (query) {
-      source = state.library.fuse.search(query).map((r) => r.item);
+      source = state.library.fuse
+        .search(query)
+        .filter((r) => fuseConfidence(r.score) >= 0.5)
+        .map((r) => r.item);
     }
 
     const groups = new Map<string, { title: string; platforms: Set<string> }>();
