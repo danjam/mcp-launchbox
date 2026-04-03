@@ -6,6 +6,11 @@ import { buildLibrary, type Library } from './loader.js';
 import { type ToolName, tools } from './tools.js';
 import type { MCPRequest, MCPResponse, RequestId } from './types.js';
 
+const PARSE_ERROR = -32700;
+const METHOD_NOT_FOUND = -32601;
+const INVALID_PARAMS = -32602;
+const INTERNAL_ERROR = -32603;
+
 const platformsPath = process.env.LAUNCHBOX_PLATFORMS_PATH;
 if (!platformsPath) {
   console.error('LAUNCHBOX_PLATFORMS_PATH environment variable is required');
@@ -52,7 +57,7 @@ const handlers = createHandlers(state, reload);
 
 async function handleToolCall(id: RequestId, name: string, args: Record<string, unknown>): Promise<void> {
   if (!Object.hasOwn(handlers, name)) {
-    error(id, -32602, `Unknown tool: ${name}`);
+    error(id, INVALID_PARAMS, `Unknown tool: ${name}`);
     return;
   }
   try {
@@ -88,18 +93,18 @@ function handleRequest(req: MCPRequest): void {
     case 'tools/call': {
       const name = req.params?.name;
       if (typeof name !== 'string') {
-        error(id, -32602, 'Missing required parameter: name');
+        error(id, INVALID_PARAMS, 'Missing required parameter: name');
         break;
       }
       const rawArgs = req.params?.arguments ?? {};
       if (typeof rawArgs !== 'object' || rawArgs === null || Array.isArray(rawArgs)) {
-        error(id, -32602, 'Invalid parameter: arguments must be an object');
+        error(id, INVALID_PARAMS, 'Invalid parameter: arguments must be an object');
         break;
       }
       handleToolCall(id, name, rawArgs as Record<string, unknown>).catch((e) => {
         console.error(`Unhandled error in tool call ${name}:`, e);
         try {
-          error(id, -32603, 'Internal error');
+          error(id, INTERNAL_ERROR, 'Internal error');
         } catch (writeErr) {
           console.error(`Failed to write error response for tool call ${name}:`, writeErr);
         }
@@ -110,7 +115,7 @@ function handleRequest(req: MCPRequest): void {
       reply(id, {});
       break;
     default:
-      error(id, -32601, 'Method not found');
+      error(id, METHOD_NOT_FOUND, 'Method not found');
   }
 }
 
@@ -122,7 +127,7 @@ rl.on('line', function handleLine(line: string): void {
     req = JSON.parse(line);
   } catch (e) {
     console.error(`Failed to parse JSON-RPC message: ${e}`);
-    send({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } });
+    send({ jsonrpc: '2.0', id: null, error: { code: PARSE_ERROR, message: 'Parse error' } });
     return;
   }
   handleRequest(req);
