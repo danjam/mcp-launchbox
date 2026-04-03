@@ -16,18 +16,9 @@ Full codebase review — 20 agents across 2 passes.
 ## Medium
 
 - [ ] **No JSON-RPC structural validation** — `src/index.ts:119-121`: `JSON.parse(line)` assigned to `MCPRequest` with no runtime check. Non-object JSON (e.g. `42`, `"hello"`, `[1,2,3]`) silently disappears via `req.id == null`. Add `typeof raw !== 'object' || raw === null` guard returning `-32600 Invalid Request`.
-- [ ] **Single bad XML file aborts entire load** — `src/loader.ts:90-99`: `Promise.all` rejects on first failure. One corrupt or non-LaunchBox `.xml` file in the platforms directory crashes startup or fails reload. `Promise.allSettled` with per-file warnings would be more resilient.
-- [ ] **Batch requests silently dropped** — `src/index.ts:119-127`: JSON-RPC 2.0 arrays parse successfully, `req.id` is `undefined`, silently dropped. A `-32600` error would prevent clients from hanging.
 - [ ] **Unsafe state cast** — `src/index.ts:35`: `{} as { library: Library }` — `state.library` is `undefined` until `reload()` completes. Restructure: `const library = await buildLibrary(...); const state = { library };`.
-- [ ] **Double-response risk in `handleToolCall`** — `src/index.ts:58-67,98-105`: Internal try/catch calls `errorReply`; if that throws (stdout closed), outer `.catch()` calls `error()` again — two responses to the same `id`.
-- [ ] **`id: null` silently dropped** — `src/index.ts:71`: `req.id == null` catches both `undefined` and `null`. A client sending explicit `id: null` on a `tools/call` gets no response. JSON-RPC 2.0 reserves `id: null` for parse errors, so this is defensible but surprising — a `-32600 Invalid Request` would be clearer.
-- [ ] **`check_library` limit is caller-controlled** — `src/handlers.ts:45-47`: Client can pass `{ games: [...9999 titles], limit: 10000 }` to bypass the 100-title default. Each title runs a Fuse search. No hard ceiling.
-- [ ] **`find_duplicates` only detects cross-platform copies** — `src/handlers.ts:146-154`: `Set<string>` of platforms collapses same-platform duplicates. Tool description says "games owned on multiple platforms" which matches, but the tool name "find_duplicates" implies broader detection. Same-title same-platform entries (different editions, re-releases) are invisible.
 - [ ] **`asString` conflates "not provided" with "wrong type"** — `src/utils.ts:17-20`: Returns `undefined` for both. Requires fragile two-step guard at every call site (repeated 3 times). Should return `ToolResult` on type mismatch like `asInt` does.
-- [ ] **`toNum` silently coerces garbage to 0** — `src/loader.ts:27-30`: Non-numeric XML values become 0 without warning. Corrupted `PlayTime` indistinguishable from "never played."
 - [ ] **JSON-RPC error codes are magic numbers** — `src/index.ts:55,89,96,101,112,124`: `-32601`, `-32602`, `-32603`, `-32700` scattered as raw literals. Named constants would prevent typos and clarify intent.
-- [ ] **Leaky `Library` abstraction** — `src/loader.ts:161-167`: Exposes raw `Fuse<Game>` with mutable `add()`/`remove()`. `FUSE_OPTIONS` exported purely for test use. Test re-implements `buildLibrary` by hand (`test/unit.test.js:103-119`). Encapsulate behind `search(query)` methods.
-- [ ] **`ToolHandler` args disconnected from schemas** — `Record<string, unknown>` has no compile-time link to `MCPToolDefinition` schemas. Adding/renaming a param without updating the handler produces no compiler error.
 - [ ] **Wrong error code for unknown tool** — `src/index.ts:55`: Uses `-32601` (Method Not Found) but the method IS `tools/call` — the unknown entity is a tool name within params. Should be `-32602` (Invalid Params).
 - [ ] **`name in handlers` allows prototype keys** — `src/index.ts:54`: `in` checks the prototype chain. `__proto__`, `constructor`, `toString` bypass the unknown-tool guard. `handlers["constructor"](args)` calls `Object` as a function. Fix: `Object.hasOwn(handlers, name)`.
 - [ ] **No `process.stdout` error handler** — `src/index.ts:16`: Broken pipe (client disconnect) causes unhandled `EPIPE` error on stdout, crashing the process. Add `process.stdout.on('error', ...)`.
@@ -36,6 +27,10 @@ Full codebase review — 20 agents across 2 passes.
 - [ ] **Handler type-validation paths untested** — Non-string `platform`/`query`, empty arrays, mixed-type arrays across `search_games`, `check_library`, `find_duplicates`.
 
 ## Low
+
+### Data coercion
+
+- [ ] **`toNum` silently coerces garbage to 0** — `src/loader.ts:27-30`: Non-numeric XML values become 0 without warning. Corrupted `PlayTime` indistinguishable from "never played." Low risk given LaunchBox generates the XML, but a warning on non-empty non-numeric values would be a cheap diagnostic.
 
 ### Logic / behavior
 
