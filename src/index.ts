@@ -122,13 +122,17 @@ function handleRequest(req: MCPRequest): void {
 const rl = createInterface({ input: process.stdin, terminal: false });
 rl.on('line', function handleLine(line: string): void {
   if (!line.trim()) return;
-  let req: MCPRequest;
+  let raw: unknown;
   try {
-    req = JSON.parse(line);
+    raw = JSON.parse(line);
   } catch (e) {
     console.error(`Failed to parse JSON-RPC message: ${e}`);
     send({ jsonrpc: '2.0', id: null, error: { code: PARSE_ERROR, message: 'Parse error' } });
     return;
   }
-  handleRequest(req);
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    send({ jsonrpc: '2.0', id: null, error: { code: INVALID_PARAMS, message: 'Invalid Request: expected JSON object' } });
+    return;
+  }
+  handleRequest(raw as MCPRequest);
 });
