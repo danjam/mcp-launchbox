@@ -92,7 +92,11 @@ export async function loadGames(platformsPath: string): Promise<{
       try {
         const xml = await readFile(join(platformsPath, file), 'utf-8');
         const parsed = parser.parse(xml);
-        return (parsed?.LaunchBox?.Game ?? []) as Record<string, unknown>[];
+        const games = (parsed?.LaunchBox?.Game ?? []) as Record<string, unknown>[];
+        if (games.length === 0 && parsed && !parsed.LaunchBox) {
+          console.warn(`"${file}" has no <LaunchBox> root element — skipping`);
+        }
+        return games;
       } catch (e) {
         throw new Error(`Failed to parse platform file "${file}": ${e instanceof Error ? e.message : e}`);
       }

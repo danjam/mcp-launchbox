@@ -196,6 +196,21 @@ describe('loadGames', () => {
     assert.equal(games[0].StarRating, 3.75);
   });
 
+  it('warns on xml with wrong root element', async (t) => {
+    const warnings = [];
+    const origWarn = console.warn;
+    console.warn = (msg) => warnings.push(msg);
+    t.after(() => { console.warn = origWarn; });
+
+    await writeFile(
+      join(dir, 'Wrong.xml'),
+      '<?xml version="1.0"?><Root><Game><ID>x1</ID><Title>Test</Title></Game></Root>',
+    );
+    const { games } = await loadGames(dir);
+    assert.equal(games.length, 0);
+    assert.ok(warnings.some((w) => w.includes('no <LaunchBox> root element')));
+  });
+
   it('handles xml with no Game elements', async () => {
     await writeFile(
       join(dir, 'Empty.xml'),
