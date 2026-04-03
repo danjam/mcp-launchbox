@@ -180,7 +180,11 @@ export function createHandlers(
   }
 
   async function handleReloadLibrary(): Promise<ToolResult> {
-    await reload();
+    try {
+      await reload();
+    } catch (e) {
+      return fail(`Reload failed: ${e instanceof Error ? e.message : e}. The previous library data is still active.`);
+    }
     return ok(
       JSON.stringify({
         reloaded: true,
