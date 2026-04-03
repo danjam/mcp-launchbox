@@ -139,7 +139,7 @@ export const FUSE_TITLE_ONLY_OPTIONS: IFuseOptions<Game> = {
   includeScore: true,
 };
 
-export async function buildLibrary(platformsPath: string) {
+export async function buildLibrary(platformsPath: string): Promise<Library> {
   const { gamesById, games } = await loadGames(platformsPath);
   const fuse = new Fuse(games, FUSE_OPTIONS);
   const fuseTitleOnly = new Fuse(games, FUSE_TITLE_ONLY_OPTIONS);
@@ -155,7 +155,7 @@ export async function buildLibrary(platformsPath: string) {
     list.push(g);
   }
 
-  return { gamesById, gamesByTitle, games, fuse, fuseTitleOnly } as Library;
+  return { gamesById, gamesByTitle, games, fuse, fuseTitleOnly };
 }
 
 export interface Library {
