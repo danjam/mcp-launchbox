@@ -35,7 +35,7 @@ function errorReply(id: RequestId, text: string): void {
   reply(id, { content: [{ type: 'text', text }], isError: true });
 }
 
-function error(id: RequestId, code: number, message: string): void {
+function error(id: RequestId | null, code: number, message: string): void {
   send({ jsonrpc: '2.0', id, error: { code, message } });
 }
 
@@ -139,11 +139,11 @@ rl.on('line', function handleLine(line: string): void {
     raw = JSON.parse(line);
   } catch (e) {
     console.error(`Failed to parse JSON-RPC message: ${e}`);
-    send({ jsonrpc: '2.0', id: null, error: { code: PARSE_ERROR, message: 'Parse error' } });
+    error(null, PARSE_ERROR, 'Parse error');
     return;
   }
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
-    send({ jsonrpc: '2.0', id: null, error: { code: INVALID_PARAMS, message: 'Invalid Request: expected JSON object' } });
+    error(null, INVALID_PARAMS, 'Invalid Request: expected JSON object');
     return;
   }
   handleRequest(raw as MCPRequest);
