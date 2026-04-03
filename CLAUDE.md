@@ -36,7 +36,8 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 
 **Source files:**
 - `src/index.ts` — Entrypoint: I/O helpers (`send`, `reply`, `textReply`, `errorReply`, `error`), env var check, library loading, request dispatch, readline listener
-- `src/handlers.ts` — `createHandlers(state, reload)` factory returning `Record<ToolName, ToolHandler>`; private helpers (`ok`, `fail`, `fuseConfidence`, `compactResult`, `sortedPlatformCounts`); all 7 tool handler functions
+- `src/handlers.ts` — `createHandlers(state, reload)` factory returning `Record<ToolName, ToolHandler>`; all 7 tool handler functions
+- `src/utils.ts` — Pure helpers: result constructors (`ok`, `fail`), argument validation (`asInt`, `asString`, `requireString`), search helpers (`fuseConfidence`, `compactResult`, `sortedPlatformCounts`)
 - `src/tools.ts` — Tool schema definitions (`as const satisfies MCPToolDefinition[]`); derives `ToolName` union type for type-safe handler map
 - `src/loader.ts` — XML parsing, game extraction, string interning (`loadGames`); Fuse.js index building (`buildLibrary`); exports `FUSE_OPTIONS` and `FUSE_TITLE_ONLY_OPTIONS`
 - `src/types.ts` — All type definitions: `Game`, `RequestId`, `ToolResult`, `ToolHandler`, MCP interfaces

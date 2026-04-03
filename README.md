@@ -85,24 +85,25 @@ Tool: `search_games`
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `query` | string | Yes | Search text to match against titles |
+| `query` | string | Yes | Search text to match against titles and series |
 | `platform` | string | No | Filter by platform name |
 | `limit` | number | No | Max results to return (default 25) |
 
 ### Check Library
 
-Check which games from a list are already in the library. Designed for bundle duplicate checking — pass all the titles in one call instead of searching one at a time. Omit `platform` to check across all platforms (recommended for bundles). Returns matches with confidence scores and a summary of how many you own vs. how many are new.
+Check which games from a list are already in the library. Uses exact title matching first, then fuzzy matching with a 0.85 confidence threshold. Designed for bundle duplicate checking — pass all the titles in one call instead of searching one at a time. Omit `platform` to check across all platforms (recommended for bundles). Returns matches with confidence scores and a summary of how many you own vs. how many are new.
 
 Tool: `check_library`
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `games` | string[] | Yes | Array of game title strings to look up (1-100) |
+| `games` | string[] | Yes | Array of game title strings to look up (max 100) |
 | `platform` | string | No | Filter matches to a specific platform |
+| `limit` | number | No | Max titles to process (default 100) |
 
 ### Get Game Details
 
-Get full details for a specific game by its ID. Returns metadata (title, platform, developer, publisher, genre, release date, series, etc.) and play data (play count, play time, last played, date added, installed, completed, progress, personal rating).
+Get full details for a specific game by its ID. Returns metadata (title, platform, developer, publisher, genre, release date, series, etc.) and play data (play count, play time, last played date, date added, installed, completed, progress, personal rating).
 
 Tool: `get_game_details`
 
