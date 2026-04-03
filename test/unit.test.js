@@ -413,8 +413,9 @@ describe('utils', () => {
       assert.equal(asString('hello'), 'hello');
     });
 
-    it('returns undefined for non-string', () => {
-      assert.equal(asString(123), undefined);
+    it('returns fail result for non-string', () => {
+      const result = asString(123);
+      assert.equal(result.ok, false);
     });
   });
 

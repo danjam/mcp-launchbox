@@ -14,9 +14,9 @@ export function asInt(val: unknown, fallback: number): number | ToolResult {
   return Number.isInteger(n) && n > 0 ? n : fail(`Invalid integer: ${val}`);
 }
 
-export function asString(val: unknown): string | undefined {
+export function asString(val: unknown): string | undefined | ToolResult {
   if (val === undefined || val === null) return undefined;
-  return typeof val === 'string' ? val : undefined;
+  return typeof val === 'string' ? val : fail(`Expected string, got ${typeof val}`);
 }
 
 export function requireString(name: string, val: unknown): string | ToolResult {

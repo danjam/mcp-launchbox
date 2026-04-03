@@ -20,7 +20,7 @@ export function createHandlers(
     const query = requireString('query', args.query);
     if (typeof query !== 'string') return query;
     const platform = asString(args.platform);
-    if (args.platform !== undefined && platform === undefined) return fail('platform must be a string');
+    if (typeof platform === 'object') return platform;
     const limit = asInt(args.limit, 25);
     if (typeof limit !== 'number') return limit;
 
@@ -46,7 +46,7 @@ export function createHandlers(
     if (typeof maxTitles !== 'number') return maxTitles;
     if (titles.length > maxTitles) return fail(`Too many titles (${titles.length}), max is ${maxTitles}`);
     const platform = asString(args.platform);
-    if (args.platform !== undefined && platform === undefined) return fail('platform must be a string');
+    if (typeof platform === 'object') return platform;
     const CONFIDENCE_THRESHOLD = 0.85;
     const platformFilter = platform?.toLowerCase();
 
@@ -134,7 +134,7 @@ export function createHandlers(
 
   async function handleFindDuplicates(args: Record<string, unknown>): Promise<ToolResult> {
     const query = asString(args.query);
-    if (args.query !== undefined && query === undefined) return fail('query must be a string');
+    if (typeof query === 'object') return query;
     const limit = asInt(args.limit, 25);
     if (typeof limit !== 'number') return limit;
 
