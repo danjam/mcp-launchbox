@@ -4,6 +4,7 @@ import Fuse from 'fuse.js';
 
 import { createHandlers } from '../dist/handlers.js';
 import { FUSE_OPTIONS, FUSE_TITLE_ONLY_OPTIONS } from '../dist/loader.js';
+import { asInt, asString, compactResult, fail, fuseConfidence, ok, requireString, sortedPlatformCounts } from '../dist/utils.js';
 
 /** @returns {import('../dist/types.js').Game[]} */
 function mockGames() {
@@ -151,6 +152,27 @@ describe('search_games', () => {
     }
   });
 
+  it('respects limit parameter', async () => {
+    const result = await handlers.search_games({ query: 'Half-Life', limit: 1 });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.showing, 1);
+      assert.equal(parsed.results.length, 1);
+      assert.ok(parsed.total >= 2);
+    }
+  });
+
+  it('platform filter is case insensitive', async () => {
+    const result = await handlers.search_games({ query: 'Half-Life', platform: 'linux' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.results.length, 1);
+      assert.equal(parsed.results[0].platform, 'Linux');
+    }
+  });
+
   it('rejects missing query', async () => {
     const result = await handlers.search_games({});
     assert.equal(result.ok, false);
@@ -247,6 +269,38 @@ describe('check_library', () => {
     }
   });
 
+  it('finds fuzzy match via slow path', async () => {
+    const result = await handlers.check_library({ games: ['Half-Life'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.ok(parsed.results[0].matches.length >= 1);
+      assert.ok(parsed.results[0].matches[0].confidence < 1.0);
+      assert.ok(parsed.results[0].matches[0].confidence >= 0.85);
+    }
+  });
+
+  it('filters by platform', async () => {
+    const result = await handlers.check_library({ games: ['Half-Life 2'], platform: 'Linux' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.results[0].matches.length, 1);
+      assert.equal(parsed.results[0].matches[0].platform, 'Linux');
+    }
+  });
+
+  it('returns mixed summary for owned and new games', async () => {
+    const result = await handlers.check_library({ games: ['Half-Life 2', 'Nonexistent Game XYZ'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.summary.total, 2);
+      assert.equal(parsed.summary.owned, 1);
+      assert.equal(parsed.summary.new, 1);
+    }
+  });
+
   it('rejects missing games param', async () => {
     const result = await handlers.check_library({});
     assert.equal(result.ok, false);
@@ -267,6 +321,15 @@ describe('find_duplicates', () => {
       assert.equal(parsed[0].count, 2);
     }
   });
+
+  it('filters by query', async () => {
+    const result = await handlers.find_duplicates({ query: 'Portal' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.length, 0);
+    }
+  });
 });
 
 describe('reload_library', () => {
@@ -281,5 +344,143 @@ describe('reload_library', () => {
       assert.equal(parsed.games, 3);
       assert.equal(parsed.platforms, 2);
     }
+  });
+});
+
+describe('utils', () => {
+  describe('ok / fail', () => {
+    it('ok returns success result', () => {
+      const result = ok('hello');
+      assert.equal(result.ok, true);
+      if (result.ok) assert.equal(result.text, 'hello');
+    });
+
+    it('fail returns error result', () => {
+      const result = fail('bad');
+      assert.equal(result.ok, false);
+      if (!result.ok) assert.equal(result.message, 'bad');
+    });
+  });
+
+  describe('asInt', () => {
+    it('returns fallback for undefined', () => {
+      assert.equal(asInt(undefined, 25), 25);
+    });
+
+    it('returns fallback for null', () => {
+      assert.equal(asInt(null, 25), 25);
+    });
+
+    it('returns valid integer', () => {
+      assert.equal(asInt(10, 25), 10);
+    });
+
+    it('returns error string for non-integer', () => {
+      assert.equal(typeof asInt('fifty', 25), 'string');
+    });
+
+    it('returns error string for zero', () => {
+      assert.equal(typeof asInt(0, 25), 'string');
+    });
+
+    it('returns error string for negative', () => {
+      assert.equal(typeof asInt(-5, 25), 'string');
+    });
+
+    it('returns error string for float', () => {
+      assert.equal(typeof asInt(2.5, 25), 'string');
+    });
+  });
+
+  describe('asString', () => {
+    it('returns undefined for undefined', () => {
+      assert.equal(asString(undefined), undefined);
+    });
+
+    it('returns undefined for null', () => {
+      assert.equal(asString(null), undefined);
+    });
+
+    it('returns string value', () => {
+      assert.equal(asString('hello'), 'hello');
+    });
+
+    it('returns undefined for non-string', () => {
+      assert.equal(asString(123), undefined);
+    });
+  });
+
+  describe('requireString', () => {
+    it('returns string for valid input', () => {
+      assert.equal(requireString('x', 'hello'), 'hello');
+    });
+
+    it('returns fail for undefined', () => {
+      const result = requireString('x', undefined);
+      assert.notEqual(typeof result, 'string');
+    });
+
+    it('returns fail for empty string', () => {
+      const result = requireString('x', '');
+      assert.notEqual(typeof result, 'string');
+    });
+
+    it('returns fail for non-string', () => {
+      const result = requireString('x', 123);
+      assert.notEqual(typeof result, 'string');
+    });
+  });
+
+  describe('fuseConfidence', () => {
+    it('perfect score (0) returns 1', () => {
+      assert.equal(fuseConfidence(0), 1);
+    });
+
+    it('worst score (1) returns 0', () => {
+      assert.equal(fuseConfidence(1), 0);
+    });
+
+    it('undefined score returns 1', () => {
+      assert.equal(fuseConfidence(undefined), 1);
+    });
+
+    it('mid score rounds to 2 decimal places', () => {
+      const result = fuseConfidence(0.333);
+      assert.equal(result, 0.67);
+    });
+  });
+
+  describe('compactResult', () => {
+    it('maps game fields correctly', () => {
+      const game = mockGames()[0];
+      const result = compactResult(game, 0.95);
+      assert.equal(result.id, 'aaa-111');
+      assert.equal(result.title, 'Half-Life 2');
+      assert.equal(result.platform, 'Windows');
+      assert.equal(result.installed, true);
+      assert.equal(result.playTime, 3600);
+      assert.equal(result.confidence, 0.95);
+    });
+
+    it('does not include extra fields', () => {
+      const game = mockGames()[0];
+      const result = compactResult(game, 1.0);
+      assert.deepEqual(Object.keys(result).sort(), ['confidence', 'id', 'installed', 'platform', 'playTime', 'title']);
+    });
+  });
+
+  describe('sortedPlatformCounts', () => {
+    it('returns empty array for empty input', () => {
+      assert.deepEqual(sortedPlatformCounts([]), []);
+    });
+
+    it('counts and sorts platforms descending', () => {
+      const games = mockGames();
+      const result = sortedPlatformCounts(games);
+      assert.equal(result[0].platform, 'Windows');
+      assert.equal(result[0].count, 2);
+      assert.equal(result[1].platform, 'Linux');
+      assert.equal(result[1].count, 1);
+    });
   });
 });
