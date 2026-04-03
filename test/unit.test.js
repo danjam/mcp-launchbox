@@ -305,6 +305,12 @@ describe('check_library', () => {
     const result = await handlers.check_library({});
     assert.equal(result.ok, false);
   });
+
+  it('rejects when titles exceed limit', async () => {
+    const result = await handlers.check_library({ games: ['A', 'B', 'C'], limit: 2 });
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.match(result.message, /Too many titles/);
+  });
 });
 
 describe('find_duplicates', () => {
