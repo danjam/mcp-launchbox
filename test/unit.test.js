@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import Fuse from 'fuse.js';
 
 import { createHandlers } from '../dist/handlers.js';
+import { FUSE_OPTIONS, FUSE_TITLE_ONLY_OPTIONS } from '../dist/loader.js';
 
 /** @returns {import('../dist/types.js').Game[]} */
 function mockGames() {
@@ -11,7 +12,6 @@ function mockGames() {
       ID: 'aaa-111',
       Title: 'Half-Life 2',
       Platform: 'Windows',
-      normalizedPlatform: 'windows',
       Developer: 'Valve',
       Publisher: 'Valve',
       Genre: 'FPS',
@@ -41,7 +41,6 @@ function mockGames() {
       ID: 'bbb-222',
       Title: 'Half-Life 2',
       Platform: 'Linux',
-      normalizedPlatform: 'linux',
       Developer: 'Valve',
       Publisher: 'Valve',
       Genre: 'FPS',
@@ -71,7 +70,6 @@ function mockGames() {
       ID: 'ccc-333',
       Title: 'Portal',
       Platform: 'Windows',
-      normalizedPlatform: 'windows',
       Developer: 'Valve',
       Publisher: 'Valve',
       Genre: 'Puzzle',
@@ -99,23 +97,6 @@ function mockGames() {
     },
   ];
 }
-
-const FUSE_OPTIONS = {
-  keys: [
-    { name: 'Title', weight: 1 },
-    { name: 'Series', weight: 0.5 },
-  ],
-  threshold: 0.3,
-  ignoreLocation: true,
-  includeScore: true,
-};
-
-const FUSE_TITLE_ONLY_OPTIONS = {
-  keys: [{ name: 'Title', weight: 1 }],
-  threshold: 0.3,
-  ignoreLocation: true,
-  includeScore: true,
-};
 
 /** @returns {import('../dist/loader.js').Library} */
 function mockLibrary() {
@@ -186,7 +167,6 @@ describe('get_game_details', () => {
       const parsed = JSON.parse(result.text);
       assert.equal(parsed.Title, 'Half-Life 2');
       assert.equal(parsed.Platform, 'Windows');
-      assert.equal(parsed.normalizedPlatform, undefined);
       assert.equal(parsed.Notes, undefined);
     }
   });

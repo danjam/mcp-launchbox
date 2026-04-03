@@ -2,7 +2,6 @@ export interface Game {
   ID: string;
   Title: string;
   Platform: string;
-  normalizedPlatform: string;
   Developer: string;
   Publisher: string;
   Genre: string;

@@ -1,5 +1,6 @@
 import type { Library } from './loader.js';
-import type { ToolHandler, ToolResult } from './types.js';
+import type { ToolName } from './tools.js';
+import type { Game, ToolHandler, ToolResult } from './types.js';
 
 function ok(text: string): ToolResult {
   return { ok: true, text };
@@ -9,10 +10,35 @@ function fail(message: string): ToolResult {
   return { ok: false, message };
 }
 
+function fuseConfidence(score: number | undefined): number {
+  return Math.round((1 - (score ?? 0)) * 100) / 100;
+}
+
+function compactResult(game: Game, confidence: number) {
+  return {
+    id: game.ID,
+    title: game.Title,
+    platform: game.Platform,
+    installed: game.Installed,
+    playTime: game.PlayTime,
+    confidence,
+  };
+}
+
+function sortedPlatformCounts(games: Game[]): { platform: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const g of games) {
+    counts.set(g.Platform, (counts.get(g.Platform) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([platform, count]) => ({ platform, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
 export function createHandlers(
   state: { library: Library },
   reload: () => Promise<void>,
-): Record<string, ToolHandler> {
+): Record<ToolName, ToolHandler> {
   async function handleSearchGames(args: Record<string, unknown>): Promise<ToolResult> {
     const query = args.query as string | undefined;
     if (!query) return fail('query is required');
@@ -23,19 +49,12 @@ export function createHandlers(
 
     if (platform) {
       const p = platform.toLowerCase();
-      results = results.filter((r) => r.item.normalizedPlatform === p);
+      results = results.filter((r) => r.item.Platform.toLowerCase() === p);
     }
 
     const limited = results.slice(0, limit);
 
-    const items = limited.map((r) => ({
-      id: r.item.ID,
-      title: r.item.Title,
-      platform: r.item.Platform,
-      installed: r.item.Installed,
-      playTime: r.item.PlayTime,
-      confidence: Math.round((1 - (r.score ?? 0)) * 100) / 100,
-    }));
+    const items = limited.map((r) => compactResult(r.item, fuseConfidence(r.score)));
 
     return ok(JSON.stringify({ total: results.length, showing: limited.length, results: items }));
   }
@@ -53,18 +72,11 @@ export function createHandlers(
 
       if (candidates) {
         if (platformFilter) {
-          candidates = candidates.filter((g) => g.normalizedPlatform === platformFilter);
+          candidates = candidates.filter((g) => g.Platform.toLowerCase() === platformFilter);
         }
         return {
           query,
-          matches: candidates.map((g) => ({
-            id: g.ID,
-            title: g.Title,
-            platform: g.Platform,
-            installed: g.Installed,
-            playTime: g.PlayTime,
-            confidence: 1.0,
-          })),
+          matches: candidates.map((g) => compactResult(g, 1.0)),
         };
       }
 
@@ -72,19 +84,12 @@ export function createHandlers(
       let fuzzyResults = state.library.fuseTitleOnly.search(query);
 
       if (platformFilter) {
-        fuzzyResults = fuzzyResults.filter((r) => r.item.normalizedPlatform === platformFilter);
+        fuzzyResults = fuzzyResults.filter((r) => r.item.Platform.toLowerCase() === platformFilter);
       }
 
       const matches = fuzzyResults
-        .filter((r) => 1 - (r.score ?? 0) >= CONFIDENCE_THRESHOLD)
-        .map((r) => ({
-          id: r.item.ID,
-          title: r.item.Title,
-          platform: r.item.Platform,
-          installed: r.item.Installed,
-          playTime: r.item.PlayTime,
-          confidence: Math.round((1 - (r.score ?? 0)) * 100) / 100,
-        }));
+        .filter((r) => fuseConfidence(r.score) >= CONFIDENCE_THRESHOLD)
+        .map((r) => compactResult(r.item, fuseConfidence(r.score)));
 
       return { query, matches };
     });
@@ -107,22 +112,40 @@ export function createHandlers(
     const game = state.library.gamesById.get(id);
     if (!game) return fail(`Game not found: ${id}`);
 
-    const { normalizedPlatform, Notes, ...rest } = game;
-    const gameData = includeNotes ? { ...rest, Notes } : rest;
+    const gameData: Record<string, unknown> = {
+      ID: game.ID,
+      Title: game.Title,
+      Platform: game.Platform,
+      Developer: game.Developer,
+      Publisher: game.Publisher,
+      Genre: game.Genre,
+      ReleaseDate: game.ReleaseDate,
+      Source: game.Source,
+      Series: game.Series,
+      PlayMode: game.PlayMode,
+      Rating: game.Rating,
+      MaxPlayers: game.MaxPlayers,
+      CommunityStarRating: game.CommunityStarRating,
+      StarRating: game.StarRating,
+      Status: game.Status,
+      Favorite: game.Favorite,
+      DatabaseID: game.DatabaseID,
+      Hide: game.Hide,
+      Broken: game.Broken,
+      PlayCount: game.PlayCount,
+      PlayTime: game.PlayTime,
+      LastPlayedDate: game.LastPlayedDate,
+      DateAdded: game.DateAdded,
+      Installed: game.Installed,
+      Completed: game.Completed,
+      Progress: game.Progress,
+    };
+    if (includeNotes) gameData.Notes = game.Notes;
     return ok(JSON.stringify(gameData));
   }
 
   async function handleListPlatforms(): Promise<ToolResult> {
-    const counts = new Map<string, number>();
-    for (const g of state.library.games) {
-      counts.set(g.Platform, (counts.get(g.Platform) ?? 0) + 1);
-    }
-
-    const platforms = [...counts.entries()]
-      .map(([platform, count]) => ({ platform, count }))
-      .sort((a, b) => b.count - a.count);
-
-    return ok(JSON.stringify(platforms));
+    return ok(JSON.stringify(sortedPlatformCounts(state.library.games)));
   }
 
   async function handleFindDuplicates(args: Record<string, unknown>): Promise<ToolResult> {
@@ -159,20 +182,12 @@ export function createHandlers(
   }
 
   async function handleGetStats(): Promise<ToolResult> {
-    const counts = new Map<string, number>();
-    for (const g of state.library.games) {
-      counts.set(g.Platform, (counts.get(g.Platform) ?? 0) + 1);
-    }
-
-    const topPlatforms = [...counts.entries()]
-      .map(([platform, count]) => ({ platform, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
+    const platforms = sortedPlatformCounts(state.library.games);
 
     const stats = {
       totalGames: state.library.games.length,
-      totalPlatforms: counts.size,
-      topPlatforms,
+      totalPlatforms: platforms.length,
+      topPlatforms: platforms.slice(0, 10),
     };
 
     return ok(JSON.stringify(stats));
@@ -180,8 +195,13 @@ export function createHandlers(
 
   async function handleReloadLibrary(): Promise<ToolResult> {
     await reload();
-    const platforms = new Set(state.library.games.map((g) => g.Platform)).size;
-    return ok(JSON.stringify({ reloaded: true, games: state.library.games.length, platforms }));
+    return ok(
+      JSON.stringify({
+        reloaded: true,
+        games: state.library.games.length,
+        platforms: sortedPlatformCounts(state.library.games).length,
+      }),
+    );
   }
 
   return {

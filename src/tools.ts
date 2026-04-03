@@ -83,4 +83,6 @@ export const tools = [
       properties: {},
     },
   },
-] satisfies MCPToolDefinition[];
+] as const satisfies MCPToolDefinition[];
+
+export type ToolName = (typeof tools)[number]['name'];
