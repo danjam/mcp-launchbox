@@ -51,8 +51,18 @@ try {
 
 const state = { library };
 
+let reloading: Promise<void> | null = null;
+
 async function reload(): Promise<void> {
-  state.library = await buildLibrary(platformsPath!);
+  if (reloading) return reloading;
+  reloading = buildLibrary(platformsPath!).then((lib) => {
+    state.library = lib;
+  });
+  try {
+    await reloading;
+  } finally {
+    reloading = null;
+  }
 }
 
 const handlers = createHandlers(state, reload);
