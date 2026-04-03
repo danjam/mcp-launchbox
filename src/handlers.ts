@@ -16,7 +16,7 @@ export function createHandlers(
   state: { library: Library },
   reload: () => Promise<void>,
 ): Record<ToolName, ToolHandler> {
-  async function handleSearchGames(args: Record<string, unknown>): Promise<ToolResult> {
+  function handleSearchGames(args: Record<string, unknown>): ToolResult {
     const query = requireString('query', args.query);
     if (typeof query !== 'string') return query;
     const platform = asString(args.platform);
@@ -38,7 +38,7 @@ export function createHandlers(
     return ok(JSON.stringify({ total: results.length, showing: limited.length, results: items }));
   }
 
-  async function handleCheckLibrary(args: Record<string, unknown>): Promise<ToolResult> {
+  function handleCheckLibrary(args: Record<string, unknown>): ToolResult {
     const titles = args.games;
     if (!Array.isArray(titles) || titles.length === 0 || !titles.every((t) => typeof t === 'string'))
       return fail('games is required (array of strings)');
@@ -89,7 +89,7 @@ export function createHandlers(
     );
   }
 
-  async function handleGetGameDetails(args: Record<string, unknown>): Promise<ToolResult> {
+  function handleGetGameDetails(args: Record<string, unknown>): ToolResult {
     const id = requireString('id', args.id);
     if (typeof id !== 'string') return id;
     const includeNotes = args.include_notes === undefined ? false : args.include_notes === true;
@@ -129,11 +129,11 @@ export function createHandlers(
     return ok(JSON.stringify(gameData));
   }
 
-  async function handleListPlatforms(): Promise<ToolResult> {
+  function handleListPlatforms(): ToolResult {
     return ok(JSON.stringify(sortedPlatformCounts(state.library.games)));
   }
 
-  async function handleFindDuplicates(args: Record<string, unknown>): Promise<ToolResult> {
+  function handleFindDuplicates(args: Record<string, unknown>): ToolResult {
     const query = asString(args.query);
     if (typeof query === 'object') return query;
     const limit = asInt(args.limit, 25);
@@ -171,7 +171,7 @@ export function createHandlers(
     return ok(JSON.stringify(duplicates));
   }
 
-  async function handleGetStats(): Promise<ToolResult> {
+  function handleGetStats(): ToolResult {
     const platforms = sortedPlatformCounts(state.library.games);
 
     const stats = {

@@ -32,7 +32,7 @@ export type RequestId = string | number;
 
 export type ToolResult = { ok: true; text: string } | { ok: false; message: string };
 
-export type ToolHandler = (args: Record<string, unknown>) => Promise<ToolResult>;
+export type ToolHandler = (args: Record<string, unknown>) => ToolResult | Promise<ToolResult>;
 
 export interface MCPToolAnnotations {
   readOnlyHint?: boolean;
