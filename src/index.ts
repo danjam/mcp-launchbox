@@ -3,12 +3,12 @@ import { createInterface } from 'node:readline';
 
 import { createHandlers } from './handlers.js';
 import { buildLibrary, type Library } from './loader.js';
-import { tools } from './tools.js';
+import { tools, type ToolName } from './tools.js';
 import type { MCPRequest, MCPResponse, RequestId } from './types.js';
 
-const launchboxPath = process.env.LAUNCHBOX_DATA_PATH;
-if (!launchboxPath) {
-  console.error('LAUNCHBOX_DATA_PATH environment variable is required');
+const platformsPath = process.env.LAUNCHBOX_PLATFORMS_PATH;
+if (!platformsPath) {
+  console.error('LAUNCHBOX_PLATFORMS_PATH environment variable is required');
   process.exit(1);
 }
 
@@ -24,6 +24,10 @@ function textReply(id: RequestId, text: string): void {
   reply(id, { content: [{ type: 'text', text }] });
 }
 
+function errorReply(id: RequestId, text: string): void {
+  reply(id, { content: [{ type: 'text', text }], isError: true });
+}
+
 function error(id: RequestId, code: number, message: string): void {
   send({ jsonrpc: '2.0', id, error: { code, message } });
 }
@@ -31,10 +35,10 @@ function error(id: RequestId, code: number, message: string): void {
 const state: { library: Library } = {} as { library: Library };
 
 async function reload(): Promise<void> {
-  state.library = await buildLibrary(launchboxPath!);
+  state.library = await buildLibrary(platformsPath!);
 }
 
-console.error(`Loading games from ${launchboxPath}...`);
+console.error(`Loading games from ${platformsPath}...`);
 try {
   await reload();
   const { games } = state.library;
@@ -47,20 +51,19 @@ try {
 const handlers = createHandlers(state, reload);
 
 async function handleToolCall(id: RequestId, name: string, args: Record<string, unknown>): Promise<void> {
-  const handler = handlers[name];
-  if (!handler) {
+  if (!(name in handlers)) {
     error(id, -32601, `Unknown tool: ${name}`);
     return;
   }
   try {
-    const result = await handler(args);
+    const result = await handlers[name as ToolName](args);
     if (result.ok) {
       textReply(id, result.text);
     } else {
-      reply(id, { content: [{ type: 'text', text: result.message }], isError: true });
+      errorReply(id, result.message);
     }
   } catch (e) {
-    reply(id, { content: [{ type: 'text', text: e instanceof Error ? e.message : 'Internal error' }], isError: true });
+    errorReply(id, e instanceof Error ? e.message : 'Internal error');
   }
 }
 
@@ -81,9 +84,15 @@ function handleRequest(req: MCPRequest): void {
     case 'tools/list':
       reply(id, { tools });
       break;
-    case 'tools/call':
-      void handleToolCall(id, req.params?.name as string, (req.params?.arguments ?? {}) as Record<string, unknown>);
+    case 'tools/call': {
+      const name = req.params?.name;
+      if (typeof name !== 'string') {
+        error(id, -32602, 'Missing required parameter: name');
+        break;
+      }
+      void handleToolCall(id, name, (req.params?.arguments ?? {}) as Record<string, unknown>);
       break;
+    }
     case 'ping':
       reply(id, {});
       break;

@@ -21,13 +21,13 @@ npm run lint:fix    # Auto-fix issues
 
 ## Environment
 
-- `LAUNCHBOX_DATA_PATH` — Required. Path to your LaunchBox root directory (the folder containing `Data/Platforms/`).
+- `LAUNCHBOX_PLATFORMS_PATH` — Required. Path to the directory containing platform XML files (e.g. `/mnt/d/LaunchBox/Data/Platforms`).
 
 ## Manual Testing
 
 Pipe JSON-RPC messages to stdin:
 ```bash
-printf '{"jsonrpc":"2.0","id":1,"method":"initialize"}\n{"jsonrpc":"2.0","id":2,"method":"tools/list"}\n' | LAUNCHBOX_DATA_PATH=/mnt/d/LaunchBox node dist/index.js
+printf '{"jsonrpc":"2.0","id":1,"method":"initialize"}\n{"jsonrpc":"2.0","id":2,"method":"tools/list"}\n' | LAUNCHBOX_PLATFORMS_PATH=/mnt/d/LaunchBox/Data/Platforms node dist/index.js
 ```
 
 ## Architecture

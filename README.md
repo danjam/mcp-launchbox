@@ -38,7 +38,7 @@ Add the server to your MCP client's configuration. There are two ways to do this
       "command": "npx",
       "args": ["-y", "github:danjam/mcp-launchbox"],
       "env": {
-        "LAUNCHBOX_DATA_PATH": "/path/to/LaunchBox"
+        "LAUNCHBOX_PLATFORMS_PATH": "C:/LaunchBox/Data/Platforms"
       }
     }
   }
@@ -62,7 +62,7 @@ Then point your MCP client at the local build:
       "command": "node",
       "args": ["/path/to/mcp-launchbox/dist/index.js"],
       "env": {
-        "LAUNCHBOX_DATA_PATH": "/path/to/LaunchBox"
+        "LAUNCHBOX_PLATFORMS_PATH": "C:/LaunchBox/Data/Platforms"
       }
     }
   }

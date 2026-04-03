@@ -35,7 +35,6 @@ function extractGame(raw: Record<string, unknown>): Game {
     ID: toStr(raw.ID),
     Title: toStr(raw.Title),
     Platform: platform,
-    normalizedPlatform: platform.toLowerCase(),
     Developer: intern(raw.Developer),
     Publisher: intern(raw.Publisher),
     Genre: intern(raw.Genre),
@@ -63,26 +62,24 @@ function extractGame(raw: Record<string, unknown>): Game {
   };
 }
 
-export async function loadGames(launchboxPath: string): Promise<{
+export async function loadGames(platformsPath: string): Promise<{
   gamesById: Map<string, Game>;
   games: Game[];
 }> {
   stringCache.clear();
 
-  const platformsDir = join(launchboxPath, 'Data', 'Platforms');
-
   let files: string[];
   try {
-    const allFiles = await readdir(platformsDir);
+    const allFiles = await readdir(platformsPath);
     files = allFiles.filter((f) => f.endsWith('.xml'));
   } catch (error: unknown) {
     const code = (error as NodeJS.ErrnoException).code;
     if (code === 'ENOENT') {
       throw new Error(
-        `Platforms directory not found at ${platformsDir}. Ensure LAUNCHBOX_DATA_PATH points to a valid LaunchBox installation.`,
+        `Platforms directory not found at ${platformsPath}. Ensure LAUNCHBOX_PLATFORMS_PATH points to a valid platforms directory.`,
       );
     }
-    throw new Error(`Failed to read platforms directory ${platformsDir}: ${error}`);
+    throw new Error(`Failed to read platforms directory ${platformsPath}: ${error}`);
   }
 
   const parser = new XMLParser({
@@ -92,7 +89,7 @@ export async function loadGames(launchboxPath: string): Promise<{
 
   const fileResults = await Promise.all(
     files.map(async (file) => {
-      const xml = await readFile(join(platformsDir, file), 'utf-8');
+      const xml = await readFile(join(platformsPath, file), 'utf-8');
       const parsed = parser.parse(xml);
       return (parsed?.LaunchBox?.Game ?? []) as Record<string, unknown>[];
     }),
@@ -106,7 +103,8 @@ export async function loadGames(launchboxPath: string): Promise<{
       const game = extractGame(raw);
       if (game.ID) {
         if (gamesById.has(game.ID)) {
-          console.warn(`Duplicate game ID "${game.ID}" (${game.Title}) — overwriting previous entry`);
+          console.warn(`Duplicate game ID "${game.ID}" (${game.Title}) — skipping`);
+          continue;
         }
         gamesById.set(game.ID, game);
         games.push(game);
@@ -114,10 +112,11 @@ export async function loadGames(launchboxPath: string): Promise<{
     }
   }
 
+  stringCache.clear();
   return { gamesById, games };
 }
 
-const FUSE_OPTIONS: IFuseOptions<Game> = {
+export const FUSE_OPTIONS: IFuseOptions<Game> = {
   keys: [
     { name: 'Title', weight: 1 },
     { name: 'Series', weight: 0.5 },
@@ -127,15 +126,15 @@ const FUSE_OPTIONS: IFuseOptions<Game> = {
   includeScore: true,
 };
 
-const FUSE_TITLE_ONLY_OPTIONS: IFuseOptions<Game> = {
+export const FUSE_TITLE_ONLY_OPTIONS: IFuseOptions<Game> = {
   keys: [{ name: 'Title', weight: 1 }],
   threshold: 0.3,
   ignoreLocation: true,
   includeScore: true,
 };
 
-export async function buildLibrary(launchboxPath: string) {
-  const { gamesById, games } = await loadGames(launchboxPath);
+export async function buildLibrary(platformsPath: string) {
+  const { gamesById, games } = await loadGames(platformsPath);
   const fuse = new Fuse(games, FUSE_OPTIONS);
   const fuseTitleOnly = new Fuse(games, FUSE_TITLE_ONLY_OPTIONS);
 
