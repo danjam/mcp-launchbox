@@ -17,6 +17,8 @@ if (!platformsPath) {
   process.exit(1);
 }
 
+process.stdout.on('error', () => process.exit(0));
+
 function send(msg: MCPResponse): void {
   process.stdout.write(`${JSON.stringify(msg)}\n`);
 }
