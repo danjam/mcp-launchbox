@@ -158,7 +158,7 @@ describe('dispatch', () => {
     srv.send({ jsonrpc: '2.0', id: 7, method: 'tools/call', params: { name: 'nonexistent_tool' } });
     const res = await srv.nextResponse();
     assert.equal(res.id, 7);
-    assert.ok(res.error);
+    assert.equal(res.error.code, -32602);
     assert.match(res.error.message, /Unknown tool/);
     await srv.close();
   });
