@@ -22,7 +22,7 @@ export function createHandlers(
     const platform = asString(args.platform);
     if (args.platform !== undefined && platform === undefined) return fail('platform must be a string');
     const limit = asInt(args.limit, 25);
-    if (typeof limit === 'string') return fail(limit);
+    if (typeof limit !== 'number') return limit;
 
     let results = state.library.fuse.search(query);
 
@@ -43,7 +43,7 @@ export function createHandlers(
     if (!Array.isArray(titles) || titles.length === 0 || !titles.every((t) => typeof t === 'string'))
       return fail('games is required (array of strings)');
     const maxTitles = asInt(args.limit, 100);
-    if (typeof maxTitles === 'string') return fail(maxTitles);
+    if (typeof maxTitles !== 'number') return maxTitles;
     if (titles.length > maxTitles) return fail(`Too many titles (${titles.length}), max is ${maxTitles}`);
     const platform = asString(args.platform);
     if (args.platform !== undefined && platform === undefined) return fail('platform must be a string');
@@ -136,7 +136,7 @@ export function createHandlers(
     const query = asString(args.query);
     if (args.query !== undefined && query === undefined) return fail('query must be a string');
     const limit = asInt(args.limit, 25);
-    if (typeof limit === 'string') return fail(limit);
+    if (typeof limit !== 'number') return limit;
 
     let source = state.library.games;
     if (query) {

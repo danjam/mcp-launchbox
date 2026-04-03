@@ -8,10 +8,10 @@ export function fail(message: string): ToolResult {
   return { ok: false, message };
 }
 
-export function asInt(val: unknown, fallback: number): number | string {
+export function asInt(val: unknown, fallback: number): number | ToolResult {
   if (val === undefined || val === null) return fallback;
   const n = Number(val);
-  return Number.isInteger(n) && n > 0 ? n : `Invalid integer: ${val}`;
+  return Number.isInteger(n) && n > 0 ? n : fail(`Invalid integer: ${val}`);
 }
 
 export function asString(val: unknown): string | undefined {
