@@ -52,5 +52,5 @@ export interface MCPRequest {
 }
 
 export type MCPResponse =
-  | { jsonrpc: '2.0'; id: RequestId | null; result: unknown }
+  | { jsonrpc: '2.0'; id: RequestId; result: unknown }
   | { jsonrpc: '2.0'; id: RequestId | null; error: { code: number; message: string } };
