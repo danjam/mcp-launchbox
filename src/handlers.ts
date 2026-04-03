@@ -92,40 +92,11 @@ export function createHandlers(
   function handleGetGameDetails(args: Record<string, unknown>): ToolResult {
     const id = requireString('id', args.id);
     if (typeof id !== 'string') return id;
-    const includeNotes = args.include_notes === undefined ? false : args.include_notes === true;
-
     const game = state.library.gamesById.get(id);
     if (!game) return fail(`Game not found: ${id}`);
 
-    const gameData: Record<string, unknown> = {
-      ID: game.ID,
-      Title: game.Title,
-      Platform: game.Platform,
-      Developer: game.Developer,
-      Publisher: game.Publisher,
-      Genre: game.Genre,
-      ReleaseDate: game.ReleaseDate,
-      Source: game.Source,
-      Series: game.Series,
-      PlayMode: game.PlayMode,
-      Rating: game.Rating,
-      MaxPlayers: game.MaxPlayers,
-      CommunityStarRating: game.CommunityStarRating,
-      StarRating: game.StarRating,
-      Status: game.Status,
-      Favorite: game.Favorite,
-      DatabaseID: game.DatabaseID,
-      Hide: game.Hide,
-      Broken: game.Broken,
-      PlayCount: game.PlayCount,
-      PlayTime: game.PlayTime,
-      LastPlayedDate: game.LastPlayedDate,
-      DateAdded: game.DateAdded,
-      Installed: game.Installed,
-      Completed: game.Completed,
-      Progress: game.Progress,
-    };
-    if (includeNotes) gameData.Notes = game.Notes;
+    const { Notes: _notes, ...gameData } = game;
+    if (args.include_notes === true) return ok(JSON.stringify({ ...gameData, Notes: _notes }));
     return ok(JSON.stringify(gameData));
   }
 
