@@ -71,9 +71,10 @@ export function createHandlers(
         fuzzyResults = fuzzyResults.filter((r) => r.item.Platform.toLowerCase() === platformFilter);
       }
 
-      const matches = fuzzyResults
-        .filter((r) => fuseConfidence(r.score) >= CONFIDENCE_THRESHOLD)
-        .map((r) => compactResult(r.item, fuseConfidence(r.score)));
+      const matches = fuzzyResults.flatMap((r) => {
+        const confidence = fuseConfidence(r.score);
+        return confidence >= CONFIDENCE_THRESHOLD ? [compactResult(r.item, confidence)] : [];
+      });
 
       return { query, matches };
     });
