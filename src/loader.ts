@@ -1,4 +1,4 @@
-import { readFile, readdir } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import Fuse, { type IFuseOptions } from 'fuse.js';
@@ -46,7 +46,7 @@ function extractGame(raw: Record<string, unknown>): Game {
     Rating: intern(raw.Rating),
     MaxPlayers: intern(raw.MaxPlayers),
     CommunityStarRating: toNum(raw.CommunityStarRating),
-    StarRating: toNum(raw.StarRatingFloat),
+    StarRating: toNum(raw.StarRatingFloat), // StarRatingFloat for decimal precision, not StarRating
     Status: intern(raw.Status),
     Favorite: toBool(raw.Favorite),
     DatabaseID: toStr(raw.DatabaseID),
@@ -89,9 +89,13 @@ export async function loadGames(platformsPath: string): Promise<{
 
   const fileResults = await Promise.all(
     files.map(async (file) => {
-      const xml = await readFile(join(platformsPath, file), 'utf-8');
-      const parsed = parser.parse(xml);
-      return (parsed?.LaunchBox?.Game ?? []) as Record<string, unknown>[];
+      try {
+        const xml = await readFile(join(platformsPath, file), 'utf-8');
+        const parsed = parser.parse(xml);
+        return (parsed?.LaunchBox?.Game ?? []) as Record<string, unknown>[];
+      } catch (e) {
+        throw new Error(`Failed to parse platform file "${file}": ${e instanceof Error ? e.message : e}`);
+      }
     }),
   );
 
@@ -101,14 +105,16 @@ export async function loadGames(platformsPath: string): Promise<{
   for (const rawGames of fileResults) {
     for (const raw of rawGames) {
       const game = extractGame(raw);
-      if (game.ID) {
-        if (gamesById.has(game.ID)) {
-          console.warn(`Duplicate game ID "${game.ID}" (${game.Title}) — skipping`);
-          continue;
-        }
-        gamesById.set(game.ID, game);
-        games.push(game);
+      if (!game.ID) {
+        console.warn(`Game "${game.Title}" on ${game.Platform} has no ID — skipping`);
+        continue;
       }
+      if (gamesById.has(game.ID)) {
+        console.warn(`Duplicate game ID "${game.ID}" (${game.Title}) — skipping`);
+        continue;
+      }
+      gamesById.set(game.ID, game);
+      games.push(game);
     }
   }
 
@@ -149,7 +155,13 @@ export async function buildLibrary(platformsPath: string) {
     list.push(g);
   }
 
-  return { gamesById, gamesByTitle, games, fuse, fuseTitleOnly };
+  return { gamesById, gamesByTitle, games, fuse, fuseTitleOnly } as Library;
 }
 
-export type Library = Awaited<ReturnType<typeof buildLibrary>>;
+export interface Library {
+  readonly gamesById: ReadonlyMap<string, Game>;
+  readonly gamesByTitle: ReadonlyMap<string, readonly Game[]>;
+  readonly games: readonly Game[];
+  readonly fuse: Fuse<Game>;
+  readonly fuseTitleOnly: Fuse<Game>;
+}

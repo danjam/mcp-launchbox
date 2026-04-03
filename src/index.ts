@@ -3,7 +3,7 @@ import { createInterface } from 'node:readline';
 
 import { createHandlers } from './handlers.js';
 import { buildLibrary, type Library } from './loader.js';
-import { tools, type ToolName } from './tools.js';
+import { type ToolName, tools } from './tools.js';
 import type { MCPRequest, MCPResponse, RequestId } from './types.js';
 
 const platformsPath = process.env.LAUNCHBOX_PLATFORMS_PATH;
@@ -90,7 +90,12 @@ function handleRequest(req: MCPRequest): void {
         error(id, -32602, 'Missing required parameter: name');
         break;
       }
-      void handleToolCall(id, name, (req.params?.arguments ?? {}) as Record<string, unknown>);
+      handleToolCall(id, name, (req.params?.arguments ?? {}) as Record<string, unknown>).catch((e) => {
+        console.error(`Unhandled error in tool call ${name}:`, e);
+        try {
+          error(id, -32603, 'Internal error');
+        } catch {}
+      });
       break;
     }
     case 'ping':
@@ -104,9 +109,13 @@ function handleRequest(req: MCPRequest): void {
 const rl = createInterface({ input: process.stdin, terminal: false });
 rl.on('line', function handleLine(line: string): void {
   if (!line.trim()) return;
+  let req: MCPRequest;
   try {
-    handleRequest(JSON.parse(line));
-  } catch {
+    req = JSON.parse(line);
+  } catch (e) {
+    console.error(`Failed to parse JSON-RPC message: ${e}`);
     send({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } });
+    return;
   }
+  handleRequest(req);
 });
