@@ -34,26 +34,15 @@ Full codebase review — 20 agents across 2 passes.
 
 ### Logic / behavior
 
-- [ ] **`asInt(0)` errors instead of using fallback** — `src/utils.ts:14`: `n > 0` rejects zero. `limit: 0` produces `"Invalid integer: 0"` rather than the default.
-- [ ] **`fuseConfidence(undefined)` returns 1.0** — `src/utils.ts:29`: Undefined score treated as perfect match. If `includeScore: true` were accidentally removed, every result would show confidence 1.0. Safer to return 0 and log a warning.
 - [ ] **`fuseConfidence` called twice per result** — `src/handlers.ts:74-76`: Computed in `.filter()` and again in `.map()` for `check_library` fuzzy path. Use `.flatMap()` or intermediate variable.
-- [ ] **`list_platforms` description implies exact-case** — `src/tools.ts:52-53`: Says names are "exact values to use" but platform filter is case-insensitive.
-- [ ] **Limit inconsistency across handlers** — `src/handlers.ts:34,47,165`: `search_games` and `find_duplicates` silently slice at limit. `check_library` errors if exceeded. Asymmetric behavior for same parameter name.
 - [ ] **Empty-title games indexed** — `src/loader.ts:108`: Games with empty `Title` pass the ID check and enter all indexes including `gamesByTitle` under key `""`.
-- [ ] **`search_games` `total` is post-filter, not pre-filter** — `src/handlers.ts:38`: When platform filter is applied, `total` reflects filtered count. Field name suggests "total matches" but it's actually "total after platform filter." Ambiguous semantics.
 - [ ] **`find_duplicates` has no confidence filter on fuzzy query results** — `src/handlers.ts:142-143`: When `query` is provided, all Fuse results (any confidence) feed into grouping. Low-confidence matches for unrelated games appear in output.
-- [ ] **`find_duplicates` title casing is first-seen dependent** — `src/handlers.ts:150`: Groups by `g.Title.toLowerCase()` but stores `g.Title` from first encounter. `DOOM` vs `Doom` on different platforms shows whichever was parsed first.
-- [ ] **`asInt` accepts numeric strings** — `src/utils.ts:13-14`: `Number("10")` is `10`, passes `isInteger` and `> 0`. `limit: "10"` silently accepted as `10`. May be unintended for JSON args.
-- [ ] **`asInt` fallback inconsistency** — `src/utils.ts:11-14`: `asInt(undefined, 0)` returns `0` (fallback path), but `asInt(0, 25)` returns `fail(...)`. Fallback `0` is allowed, user-supplied `0` is rejected.
 
 ### Protocol
 
 - [ ] **No reload concurrency guard** — `src/index.ts:37-38`: Simultaneous `reload_library` calls both run full I/O and race to assign. Doubles peak memory.
-- [ ] **No `jsonrpc: "2.0"` validation** — `src/index.ts:117-128`: Per spec, `jsonrpc` field MUST be exactly `"2.0"`. Server processes any JSON object regardless.
-- [ ] **`initialize` doesn't negotiate `protocolVersion`** — `src/index.ts:76-77`: Always asserts `'2025-11-25'` regardless of client's requested version in `req.params`. Per MCP spec, server should negotiate or reject.
 - [ ] **`ENOTDIR` gets generic error message** — `src/loader.ts:75-82`: Only `ENOENT` gets a helpful message. If `LAUNCHBOX_PLATFORMS_PATH` points to a file instead of a directory, user gets raw `Failed to read platforms directory` with no hint the path is a file.
 - [ ] **`error()` helper doesn't accept `null` id** — `src/index.ts:31`: Signature is `error(id: RequestId, ...)` but parse errors require `id: null`. Parse error at line 124 bypasses `error()` and calls `send()` directly. Inconsistent; a refactor to use `error(null, ...)` would be a type error.
-- [ ] **`stringCache` concurrent corruption** — `src/loader.ts:8,69,121`: Module-level singleton. Concurrent `reload_library` calls share the cache; one call's `clear()` at line 69 wipes entries the other call's `intern()` depends on.
 - [ ] **`fast-xml-parser` missing `htmlEntities: true`** — `src/loader.ts:85-88`: HTML entities (`&mdash;`, `&nbsp;`, `&#160;`) in XML fields stored as literal text instead of decoded characters.
 - [ ] **Node `>=18` is EOL** — `package.json:7`: Node 18 reached end-of-life April 2025. Bump to `>=20`.
 
@@ -61,22 +50,16 @@ Full codebase review — 20 agents across 2 passes.
 
 - [ ] **`search_games` zero-match case untested.**
 - [ ] **`get_game_details` non-boolean `include_notes` untested** — `src/handlers.ts:94`: Strict `=== true` means `"true"` and `1` silently excluded.
-- [ ] **`find_duplicates` invalid `query` type untested.**
-- [ ] **`gamesByTitle` build duplicated in test** — `test/unit.test.js:106-115` mirrors `loader.ts:147-156`. Test should use `buildLibrary` or a shared helper.
 - [ ] **`requireString` failure tests never assert `ok: false`** — `test/unit.test.js:427-438`: Only check `notEqual(typeof result, 'string')`. Returning `null`, `42`, or `{}` would also pass. Should assert `result.ok === false`.
 - [ ] **Weak test assertions** — `test/unit.test.js:140,243`: `total >= 1` and `topPlatforms.length > 0` are too loose. Mock has exactly 2 Half-Life 2 entries and 2 platforms. Use exact values to catch regressions.
 - [ ] **`check_library` fuzzy test confidence bound is tautological** — `test/unit.test.js:277`: `matches.length >= 1` passes even if threshold change drops one match. Should assert exact count (2 Half-Life 2 entries should both fuzzy-match "Half-Life").
 - [ ] **`check_library` exact match test incomplete** — `test/unit.test.js:258-259`: Asserts `summary.owned: 1` but never checks `summary.new: 0` or `summary.total: 1`.
 - [ ] **`asInt` tests have redundant `typeof` assertions** — `test/unit.test.js:381,393,398`: `assert.notEqual(typeof result, 'number')` is redundant next to `result.ok === false`. Can be removed.
 - [ ] **`asInt("10")` behavior untested** — Numeric strings like `"10"` silently coerce to `10`. Should document whether this is intended.
-- [ ] **`check_library({ games: [] })` untested** — Handler rejects empty arrays. No test verifies this.
 - [ ] **`limit: 0` / `limit: -1` rejection untested at handler level** — `asInt` unit tests cover this, but no handler-level test confirms the error propagates correctly.
 
 ### Types
 
-- [ ] **`Game.ID` typed as `string`** — Doesn't express non-empty invariant. Branded `GameId` type would prevent construction with `""`.
-- [ ] **`MCPToolDefinition.properties` too loose** — `src/types.ts:42`: `Record<string, unknown>` doesn't catch missing `type` or `description` on property definitions.
-- [ ] **`MCPRequest` weakest type in codebase** — `src/types.ts:47-52`: `method: string` doesn't express valid method set. `jsonrpc` literal `'2.0'` never validated at runtime.
 - [ ] **All handlers async but most don't await** — `src/handlers.ts:19,41,91,131,135,170`: Only `handleReloadLibrary` awaits. Others wrap in implicit promise. `ToolHandler` could be `() => ToolResult | Promise<ToolResult>`.
 
 ### Code quality
@@ -98,10 +81,8 @@ Full codebase review — 20 agents across 2 passes.
 
 - [ ] **`sortedPlatformCounts` recomputed per-request** — `src/handlers.ts:171,188`: Called by 3 handlers. Precompute in `Library` at build time for O(1) access.
 - [ ] **`find_duplicates` rebuilds grouping map every call** — `src/handlers.ts:141-167`: Deterministic until reload. Precompute in `Library`.
-- [ ] **Two Fuse indexes built at every load** — `src/loader.ts:144-145`: `fuseTitleOnly` only used by `check_library` slow path. Could be deferred/lazy.
 - [ ] **Fuse search has no result limit** — `src/handlers.ts:27`: `fuse.search(query)` scans full index regardless of requested `limit`. Pass limit to Fuse when no platform filter.
 - [ ] **Startup log recomputes platform count** — `src/index.ts:45`: `new Set(games.map(...)).size` — redundant with data already in Library.
-- [ ] **`Notes` always allocated, rarely read** — `src/loader.ts:43`: Stored on every `Game` but excluded by default in output. If notes are long, wastes memory.
 
 ### Housekeeping
 
