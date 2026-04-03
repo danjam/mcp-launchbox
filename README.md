@@ -97,13 +97,13 @@ Tool: `check_library`
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `games` | string[] | Yes | Array of game title strings to look up (max 100) |
+| `games` | string[] | Yes | Array of game title strings to look up |
 | `platform` | string | No | Filter matches to a specific platform |
 | `limit` | number | No | Max titles to process (default 100) |
 
 ### Get Game Details
 
-Get full details for a specific game by its ID. Returns metadata (title, platform, developer, publisher, genre, release date, series, etc.) and play data (play count, play time, last played date, date added, installed, completed, progress, personal rating).
+Get full details for a specific game by its ID. Returns all metadata including title, platform, developer, genre, series, ratings, and play data such as play count, play time, installed status, and more.
 
 Tool: `get_game_details`
 

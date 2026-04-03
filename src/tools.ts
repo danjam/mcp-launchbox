@@ -18,7 +18,7 @@ export const tools = [
   {
     name: 'check_library',
     description:
-      'Check which games from a list are already in the library. Accepts an array of game titles and returns matches for each. Uses exact title matching first, then fuzzy matching with a 0.85 confidence threshold. Designed for bundle duplicate checking — replaces calling search_games per title. Omit platform to check across all platforms (recommended for bundles).',
+      'Check which games from a list are already in the library. Accepts an array of game titles and returns matches for each. Uses exact title matching first, then fuzzy title-only matching with a 0.85 confidence threshold. Designed for bundle duplicate checking — replaces calling search_games per title. Omit platform to check across all platforms (recommended for bundles).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -26,8 +26,7 @@ export const tools = [
           type: 'array',
           items: { type: 'string' },
           minItems: 1,
-          maxItems: 100,
-          description: 'Array of game title strings to look up (max 100)',
+          description: 'Array of game title strings to look up',
         },
         platform: { type: 'string', description: 'Filter matches to a specific platform' },
         limit: { type: 'integer', description: 'Max titles to process (default 100)' },
@@ -38,7 +37,7 @@ export const tools = [
   {
     name: 'get_game_details',
     description:
-      'Get full details for a specific game by ID. Returns metadata (title, platform, developer, publisher, genre, release date, series) and play data (play count, play time, last played date, date added, installed, completed, progress, personal star rating).',
+      'Get full details for a specific game by ID. Returns all metadata including title, platform, developer, genre, series, ratings, and play data such as play count, play time, installed status, and more.',
     inputSchema: {
       type: 'object',
       properties: {
