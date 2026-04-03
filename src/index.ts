@@ -37,20 +37,20 @@ function error(id: RequestId, code: number, message: string): void {
   send({ jsonrpc: '2.0', id, error: { code, message } });
 }
 
-const state: { library: Library } = {} as { library: Library };
-
-async function reload(): Promise<void> {
-  state.library = await buildLibrary(platformsPath!);
-}
-
 console.error(`Loading games from ${platformsPath}...`);
+let library: Library;
 try {
-  await reload();
-  const { games } = state.library;
-  console.error(`Loaded ${games.length} games across ${new Set(games.map((g) => g.Platform)).size} platforms`);
+  library = await buildLibrary(platformsPath!);
+  console.error(`Loaded ${library.games.length} games across ${new Set(library.games.map((g) => g.Platform)).size} platforms`);
 } catch (e) {
   console.error(`Failed to load games: ${e}`);
   process.exit(1);
+}
+
+const state = { library };
+
+async function reload(): Promise<void> {
+  state.library = await buildLibrary(platformsPath!);
 }
 
 const handlers = createHandlers(state, reload);
