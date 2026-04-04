@@ -19,7 +19,7 @@ Works with Claude Desktop, Claude Code, or any MCP-compatible client.
 
 ## Setup
 
-Requires [Node.js](https://nodejs.org/) 18+.
+Requires [Node.js](https://nodejs.org/) 20+.
 
 ### 1. Have a LaunchBox Installation
 

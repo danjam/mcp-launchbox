@@ -35,22 +35,25 @@ printf '{"jsonrpc":"2.0","id":1,"method":"initialize"}\n{"jsonrpc":"2.0","id":2,
 This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox game library. It communicates over **stdin/stdout using JSON-RPC 2.0** — there is no HTTP server or MCP SDK dependency.
 
 **Source files:**
-- `src/index.ts` — Entrypoint: I/O helpers (`send`, `reply`, `textReply`, `errorReply`, `error`), env var check, library loading, request dispatch, readline listener
-- `src/handlers.ts` — `createHandlers(state, reload)` factory returning `Record<ToolName, ToolHandler>`; all 7 tool handler functions
+- `src/index.ts` — Entrypoint: JSON-RPC error code constants, I/O helpers (`send`, `reply`, `textReply`, `errorReply`, `error`), env var check, library loading, reload concurrency guard, request dispatch with structural validation, readline listener, stdout error handler
+- `src/handlers.ts` — `matchesPlatform` helper, `createHandlers(state, reload)` factory returning `Record<ToolName, ToolHandler>`; all 7 tool handler functions (sync except `handleReloadLibrary`)
 - `src/utils.ts` — Pure helpers: result constructors (`ok`, `fail`), argument validation (`asInt`, `asString`, `requireString`), search helpers (`fuseConfidence`, `compactResult`, `sortedPlatformCounts`)
-- `src/tools.ts` — Tool schema definitions (`as const satisfies MCPToolDefinition[]`); derives `ToolName` union type for type-safe handler map
-- `src/loader.ts` — XML parsing, game extraction, string interning (`loadGames`); Fuse.js index building (`buildLibrary`); exports `FUSE_OPTIONS` and `FUSE_TITLE_ONLY_OPTIONS`
-- `src/types.ts` — All type definitions: `Game`, `RequestId`, `ToolResult`, `ToolHandler`, MCP interfaces
+- `src/tools.ts` — Tool schema definitions with MCP annotations (`as const satisfies MCPToolDefinition[]`); derives `ToolName` union type for type-safe handler map
+- `src/loader.ts` — XML parsing with `htmlEntities`, game extraction, string interning (`loadGames`); Fuse.js index building, precomputed `platformCounts` and `duplicateGroups` (`buildLibrary`); exports `FUSE_OPTIONS` and `FUSE_TITLE_ONLY_OPTIONS`
+- `src/types.ts` — All type definitions: `Game`, `RequestId`, `ToolResult`, `ToolHandler`, `MCPToolAnnotations`, MCP interfaces
 
-**Request flow:** stdin line → JSON parse → `handleRequest` dispatches by MCP method (`initialize`, `tools/list`, `tools/call`) → `handleToolCall` looks up handler in map → handler returns `ToolResult` → dispatch maps result to JSON-RPC response on stdout.
+**Request flow:** stdin line → JSON parse → structural validation (object check) → `handleRequest` dispatches by MCP method (`initialize`, `tools/list`, `tools/call`) → `handleToolCall` looks up handler via `Object.hasOwn` → handler returns `ToolResult` → dispatch maps result to JSON-RPC response on stdout. Parse errors and invalid structures return proper JSON-RPC error codes via named constants.
 
 **Data loading:**
 - `LAUNCHBOX_PLATFORMS_PATH` points directly at the directory containing platform XML files (one file per platform)
 - All XML is parsed and loaded into memory at startup (async parallel I/O)
-- Duplicate game IDs are skipped (first entry wins) with a warning logged to stderr
+- Games with no ID, no title, or duplicate IDs are skipped with per-game and aggregate warnings to stderr
+- XML files with non-`<LaunchBox>` root elements are warned and skipped; ENOENT and ENOTDIR get helpful error messages
 - In-memory index: `Map<id, Game>` for O(1) lookup, Fuse.js indexes for fuzzy search
+- Precomputed at build time: `platformCounts` (sorted) and `duplicateGroups` for O(1) access
 - String interning on repetitive fields (Platform, Developer, Genre, etc.) to reduce memory; cache cleared after loading
 - `buildLibrary()` returns a `Library` object held in a mutable `state` ref so `reload_library` can swap it
+- Concurrent `reload_library` calls coalesce (second call awaits the first)
 
 **Tools exposed:** `search_games`, `check_library`, `get_game_details`, `list_platforms`, `find_duplicates`, `get_stats`, `reload_library`.
 
