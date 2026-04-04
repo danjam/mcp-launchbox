@@ -1,15 +1,7 @@
 import type { Library } from './loader.js';
 import type { ToolName } from './tools.js';
 import type { ToolHandler, ToolResult } from './types.js';
-import {
-  asInt,
-  asString,
-  compactResult,
-  fail,
-  fuseConfidence,
-  ok,
-  requireString,
-} from './utils.js';
+import { asInt, asString, compactResult, fail, fuseConfidence, ok, requireString } from './utils.js';
 
 function matchesPlatform(gamePlatform: string, filter: string): boolean {
   return gamePlatform.toLowerCase() === filter.toLowerCase();

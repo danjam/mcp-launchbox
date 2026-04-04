@@ -30,60 +30,60 @@ Full codebase review — 20 agents across 2 passes.
 
 ### Data coercion
 
-- [ ] **`toNum` silently coerces garbage to 0** — `src/loader.ts:27-30`: Non-numeric XML values become 0 without warning. Corrupted `PlayTime` indistinguishable from "never played." Low risk given LaunchBox generates the XML, but a warning on non-empty non-numeric values would be a cheap diagnostic.
+- [x] **`toNum` silently coerces garbage to 0** — `src/loader.ts:27-30`: Non-numeric XML values become 0 without warning. Corrupted `PlayTime` indistinguishable from "never played." Low risk given LaunchBox generates the XML, but a warning on non-empty non-numeric values would be a cheap diagnostic.
 
 ### Logic / behavior
 
-- [ ] **`fuseConfidence` called twice per result** — `src/handlers.ts:74-76`: Computed in `.filter()` and again in `.map()` for `check_library` fuzzy path. Use `.flatMap()` or intermediate variable.
-- [ ] **Empty-title games indexed** — `src/loader.ts:108`: Games with empty `Title` pass the ID check and enter all indexes including `gamesByTitle` under key `""`.
-- [ ] **`find_duplicates` has no confidence filter on fuzzy query results** — `src/handlers.ts:142-143`: When `query` is provided, all Fuse results (any confidence) feed into grouping. Low-confidence matches for unrelated games appear in output.
+- [x] **`fuseConfidence` called twice per result** — `src/handlers.ts:74-76`: Computed in `.filter()` and again in `.map()` for `check_library` fuzzy path. Use `.flatMap()` or intermediate variable.
+- [x] **Empty-title games indexed** — `src/loader.ts:108`: Games with empty `Title` pass the ID check and enter all indexes including `gamesByTitle` under key `""`.
+- [x] **`find_duplicates` has no confidence filter on fuzzy query results** — `src/handlers.ts:142-143`: When `query` is provided, all Fuse results (any confidence) feed into grouping. Low-confidence matches for unrelated games appear in output.
 
 ### Protocol
 
-- [ ] **No reload concurrency guard** — `src/index.ts:37-38`: Simultaneous `reload_library` calls both run full I/O and race to assign. Doubles peak memory.
-- [ ] **`ENOTDIR` gets generic error message** — `src/loader.ts:75-82`: Only `ENOENT` gets a helpful message. If `LAUNCHBOX_PLATFORMS_PATH` points to a file instead of a directory, user gets raw `Failed to read platforms directory` with no hint the path is a file.
-- [ ] **`error()` helper doesn't accept `null` id** — `src/index.ts:31`: Signature is `error(id: RequestId, ...)` but parse errors require `id: null`. Parse error at line 124 bypasses `error()` and calls `send()` directly. Inconsistent; a refactor to use `error(null, ...)` would be a type error.
-- [ ] **`fast-xml-parser` missing `htmlEntities: true`** — `src/loader.ts:85-88`: HTML entities (`&mdash;`, `&nbsp;`, `&#160;`) in XML fields stored as literal text instead of decoded characters.
-- [ ] **Node `>=18` is EOL** — `package.json:7`: Node 18 reached end-of-life April 2025. Bump to `>=20`.
+- [x] **No reload concurrency guard** — `src/index.ts:37-38`: Simultaneous `reload_library` calls both run full I/O and race to assign. Doubles peak memory.
+- [x] **`ENOTDIR` gets generic error message** — `src/loader.ts:75-82`: Only `ENOENT` gets a helpful message. If `LAUNCHBOX_PLATFORMS_PATH` points to a file instead of a directory, user gets raw `Failed to read platforms directory` with no hint the path is a file.
+- [x] **`error()` helper doesn't accept `null` id** — `src/index.ts:31`: Signature is `error(id: RequestId, ...)` but parse errors require `id: null`. Parse error at line 124 bypasses `error()` and calls `send()` directly. Inconsistent; a refactor to use `error(null, ...)` would be a type error.
+- [x] **`fast-xml-parser` missing `htmlEntities: true`** — `src/loader.ts:85-88`: HTML entities (`&mdash;`, `&nbsp;`, `&#160;`) in XML fields stored as literal text instead of decoded characters.
+- [x] **Node `>=18` is EOL** — `package.json:7`: Node 18 reached end-of-life April 2025. Bump to `>=20`.
 
 ### Test gaps
 
-- [ ] **`search_games` zero-match case untested.**
-- [ ] **`get_game_details` non-boolean `include_notes` untested** — `src/handlers.ts:94`: Strict `=== true` means `"true"` and `1` silently excluded.
-- [ ] **`requireString` failure tests never assert `ok: false`** — `test/unit.test.js:427-438`: Only check `notEqual(typeof result, 'string')`. Returning `null`, `42`, or `{}` would also pass. Should assert `result.ok === false`.
-- [ ] **Weak test assertions** — `test/unit.test.js:140,243`: `total >= 1` and `topPlatforms.length > 0` are too loose. Mock has exactly 2 Half-Life 2 entries and 2 platforms. Use exact values to catch regressions.
-- [ ] **`check_library` fuzzy test confidence bound is tautological** — `test/unit.test.js:277`: `matches.length >= 1` passes even if threshold change drops one match. Should assert exact count (2 Half-Life 2 entries should both fuzzy-match "Half-Life").
-- [ ] **`check_library` exact match test incomplete** — `test/unit.test.js:258-259`: Asserts `summary.owned: 1` but never checks `summary.new: 0` or `summary.total: 1`.
-- [ ] **`asInt` tests have redundant `typeof` assertions** — `test/unit.test.js:381,393,398`: `assert.notEqual(typeof result, 'number')` is redundant next to `result.ok === false`. Can be removed.
-- [ ] **`asInt("10")` behavior untested** — Numeric strings like `"10"` silently coerce to `10`. Should document whether this is intended.
-- [ ] **`limit: 0` / `limit: -1` rejection untested at handler level** — `asInt` unit tests cover this, but no handler-level test confirms the error propagates correctly.
+- [x] **`search_games` zero-match case untested.**
+- [x] **`get_game_details` non-boolean `include_notes` untested** — `src/handlers.ts:94`: Strict `=== true` means `"true"` and `1` silently excluded.
+- [x] **`requireString` failure tests never assert `ok: false`** — `test/unit.test.js:427-438`: Only check `notEqual(typeof result, 'string')`. Returning `null`, `42`, or `{}` would also pass. Should assert `result.ok === false`.
+- [x] **Weak test assertions** — `test/unit.test.js:140,243`: `total >= 1` and `topPlatforms.length > 0` are too loose. Mock has exactly 2 Half-Life 2 entries and 2 platforms. Use exact values to catch regressions.
+- [x] **`check_library` fuzzy test confidence bound is tautological** — `test/unit.test.js:277`: `matches.length >= 1` passes even if threshold change drops one match. Should assert exact count (2 Half-Life 2 entries should both fuzzy-match "Half-Life").
+- [x] **`check_library` exact match test incomplete** — `test/unit.test.js:258-259`: Asserts `summary.owned: 1` but never checks `summary.new: 0` or `summary.total: 1`.
+- [x] **`asInt` tests have redundant `typeof` assertions** — `test/unit.test.js:381,393,398`: `assert.notEqual(typeof result, 'number')` is redundant next to `result.ok === false`. Can be removed.
+- [x] **`asInt("10")` behavior untested** — Numeric strings like `"10"` silently coerce to `10`. Should document whether this is intended.
+- [x] **`limit: 0` / `limit: -1` rejection untested at handler level** — `asInt` unit tests cover this, but no handler-level test confirms the error propagates correctly.
 
 ### Types
 
-- [ ] **All handlers async but most don't await** — `src/handlers.ts:19,41,91,131,135,170`: Only `handleReloadLibrary` awaits. Others wrap in implicit promise. `ToolHandler` could be `() => ToolResult | Promise<ToolResult>`.
+- [x] **All handlers async but most don't await** — `src/handlers.ts:19,41,91,131,135,170`: Only `handleReloadLibrary` awaits. Others wrap in implicit promise. `ToolHandler` could be `() => ToolResult | Promise<ToolResult>`.
 
 ### Code quality
 
-- [ ] **`get_game_details` manually enumerates 25 Game fields** — `src/handlers.ts:99-126`: Fragile — adding a field to `Game` requires updating this list. Spread + conditional `Notes` omission would be ~3 lines.
-- [ ] **`includeNotes` ternary is redundant** — `src/handlers.ts:94`: `args.include_notes === undefined ? false : args.include_notes === true` simplifies to `args.include_notes === true`.
-- [ ] **Platform filter logic duplicated** — `src/handlers.ts:27-31,58-60,68-72`: Same `.toLowerCase() ===` in 3 places across 2 handlers. Extract `matchesPlatform` helper.
-- [ ] **`compactResult` missing return type annotation** — `src/utils.ts:32`: Every other exported function in utils.ts has one.
+- [x] **`get_game_details` manually enumerates 25 Game fields** — `src/handlers.ts:99-126`: Fragile — adding a field to `Game` requires updating this list. Spread + conditional `Notes` omission would be ~3 lines.
+- [x] **`includeNotes` ternary is redundant** — `src/handlers.ts:94`: `args.include_notes === undefined ? false : args.include_notes === true` simplifies to `args.include_notes === true`.
+- [x] **Platform filter logic duplicated** — `src/handlers.ts:27-31,58-60,68-72`: Same `.toLowerCase() ===` in 3 places across 2 handlers. Extract `matchesPlatform` helper.
+- [x] **`compactResult` missing return type annotation** — `src/utils.ts:32`: Every other exported function in utils.ts has one.
 
 ### Comments / docs
 
-- [ ] **Comment: "exact title match" is misleading** — `src/handlers.ts:54`: Lookup uses `query.toLowerCase()` — it's case-insensitive, not exact.
-- [ ] **Comment: Fuse score description imprecise** — `src/utils.ts:27`: Says "1 (no match)" but Fuse excludes non-matches. Should say "worst match that passed threshold." Also doesn't document `?? 0` fallback treating undefined as perfect.
-- [ ] **`isArray` XML parser callback unexplained** — `src/loader.ts:87`: Ensures `Game` is always an array even for single-game platform files. Non-obvious fast-xml-parser behavior; deserves a comment.
-- [ ] **`CONFIDENCE_THRESHOLD` rationale undocumented** — `src/handlers.ts:50`: `0.85` is a tuned value with no comment explaining the choice.
-- [ ] **No aggregate skip count at startup** — `src/loader.ts:108-115`: Per-game warnings for no-ID and duplicate-ID games, but no summary. "Loaded 9500 games" gives no hint that 500 were dropped.
+- [x] **Comment: "exact title match" is misleading** — `src/handlers.ts:54`: Lookup uses `query.toLowerCase()` — it's case-insensitive, not exact.
+- [x] **Comment: Fuse score description imprecise** — `src/utils.ts:27`: Says "1 (no match)" but Fuse excludes non-matches. Should say "worst match that passed threshold." Also doesn't document `?? 0` fallback treating undefined as perfect.
+- [x] **`isArray` XML parser callback unexplained** — `src/loader.ts:87`: Ensures `Game` is always an array even for single-game platform files. Non-obvious fast-xml-parser behavior; deserves a comment.
+- [x] **`CONFIDENCE_THRESHOLD` rationale undocumented** — `src/handlers.ts:50`: `0.85` is a tuned value with no comment explaining the choice.
+- [x] **No aggregate skip count at startup** — `src/loader.ts:108-115`: Per-game warnings for no-ID and duplicate-ID games, but no summary. "Loaded 9500 games" gives no hint that 500 were dropped.
 
 ### Efficiency
 
-- [ ] **`sortedPlatformCounts` recomputed per-request** — `src/handlers.ts:171,188`: Called by 3 handlers. Precompute in `Library` at build time for O(1) access.
-- [ ] **`find_duplicates` rebuilds grouping map every call** — `src/handlers.ts:141-167`: Deterministic until reload. Precompute in `Library`.
-- [ ] **Fuse search has no result limit** — `src/handlers.ts:27`: `fuse.search(query)` scans full index regardless of requested `limit`. Pass limit to Fuse when no platform filter.
-- [ ] **Startup log recomputes platform count** — `src/index.ts:45`: `new Set(games.map(...)).size` — redundant with data already in Library.
+- [x] **`sortedPlatformCounts` recomputed per-request** — `src/handlers.ts:171,188`: Called by 3 handlers. Precompute in `Library` at build time for O(1) access.
+- [x] **`find_duplicates` rebuilds grouping map every call** — `src/handlers.ts:141-167`: Deterministic until reload. Precompute in `Library`.
+- [x] **Fuse search has no result limit** — `src/handlers.ts:27`: `fuse.search(query)` scans full index regardless of requested `limit`. Pass limit to Fuse when no platform filter.
+- [x] **Startup log recomputes platform count** — `src/index.ts:45`: `new Set(games.map(...)).size` — redundant with data already in Library.
 
 ### Housekeeping
 
-- [ ] **Stale memory entry: `normalizedPlatform`** — Memory says "internal-only, excluded from get_game_details output" but the field doesn't exist anywhere in the codebase. Clean up memory.
+- [x] **Stale memory entry: `normalizedPlatform`** — Memory says "internal-only, excluded from get_game_details output" but the field doesn't exist anywhere in the codebase. Clean up memory.
