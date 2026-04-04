@@ -1,6 +1,6 @@
 import type { Library } from './loader.js';
 import type { ToolName } from './tools.js';
-import type { Game, ToolHandler, ToolResult } from './types.js';
+import type { ToolHandler, ToolResult } from './types.js';
 import {
   asInt,
   asString,
@@ -113,13 +113,14 @@ export function createHandlers(
     const limit = asInt(args.limit, 25);
     if (typeof limit !== 'number') return limit;
 
-    let source: readonly Game[] = state.library.games;
-    if (query) {
-      source = state.library.fuse
-        .search(query)
-        .filter((r) => fuseConfidence(r.score) >= 0.5)
-        .map((r) => r.item);
+    if (!query) {
+      return ok(JSON.stringify(state.library.duplicateGroups.slice(0, limit)));
     }
+
+    const source = state.library.fuse
+      .search(query)
+      .filter((r) => fuseConfidence(r.score) >= 0.5)
+      .map((r) => r.item);
 
     const groups = new Map<string, { title: string; platforms: Set<string> }>();
     for (const g of source) {
@@ -134,11 +135,7 @@ export function createHandlers(
 
     const duplicates = [...groups.values()]
       .filter((g) => g.platforms.size >= 2)
-      .map((g) => ({
-        title: g.title,
-        platforms: [...g.platforms].sort(),
-        count: g.platforms.size,
-      }))
+      .map((g) => ({ title: g.title, platforms: [...g.platforms].sort(), count: g.platforms.size }))
       .sort((a, b) => b.count - a.count)
       .slice(0, limit);
 

@@ -117,7 +117,18 @@ function mockLibrary() {
   const fuse = new Fuse(games, FUSE_OPTIONS);
   const fuseTitleOnly = new Fuse(games, FUSE_TITLE_ONLY_OPTIONS);
   const platformCounts = sortedPlatformCounts(games);
-  return { gamesById, gamesByTitle, games, fuse, fuseTitleOnly, platformCounts };
+  const dupMap = new Map();
+  for (const g of games) {
+    const key = g.Title.toLowerCase();
+    let group = dupMap.get(key);
+    if (!group) { group = { title: g.Title, platforms: new Set() }; dupMap.set(key, group); }
+    group.platforms.add(g.Platform);
+  }
+  const duplicateGroups = [...dupMap.values()]
+    .filter((g) => g.platforms.size >= 2)
+    .map((g) => ({ title: g.title, platforms: [...g.platforms].sort(), count: g.platforms.size }))
+    .sort((a, b) => b.count - a.count);
+  return { gamesById, gamesByTitle, games, fuse, fuseTitleOnly, platformCounts, duplicateGroups };
 }
 
 function setup() {
