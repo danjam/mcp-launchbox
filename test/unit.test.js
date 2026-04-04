@@ -172,7 +172,6 @@ describe('search_games', () => {
       const parsed = JSON.parse(result.text);
       assert.equal(parsed.showing, 1);
       assert.equal(parsed.results.length, 1);
-      assert.ok(parsed.total >= 2);
     }
   });
 

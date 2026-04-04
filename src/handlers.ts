@@ -27,13 +27,13 @@ export function createHandlers(
     const limit = asInt(args.limit, 25);
     if (typeof limit !== 'number') return limit;
 
-    let results = state.library.fuse.search(query);
+    let results = state.library.fuse.search(query, platform ? undefined : { limit });
 
     if (platform) {
       results = results.filter((r) => matchesPlatform(r.item.Platform, platform));
     }
 
-    const limited = results.slice(0, limit);
+    const limited = platform ? results.slice(0, limit) : results;
 
     const items = limited.map((r) => compactResult(r.item, fuseConfidence(r.score)));
 
