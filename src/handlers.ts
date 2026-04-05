@@ -19,17 +19,15 @@ export function createHandlers(
     const limit = asInt(args.limit, 25);
     if (typeof limit !== 'number') return limit;
 
-    let results = state.library.fuse.search(query, platform ? undefined : { limit });
+    let results = state.library.fuse.search(query);
 
     if (platform) {
       results = results.filter((r) => matchesPlatform(r.item.Platform, platform));
     }
 
-    const limited = platform ? results.slice(0, limit) : results;
+    const items = results.slice(0, limit).map((r) => compactResult(r.item, fuseConfidence(r.score)));
 
-    const items = limited.map((r) => compactResult(r.item, fuseConfidence(r.score)));
-
-    return ok(JSON.stringify({ total: results.length, showing: limited.length, results: items }));
+    return ok(JSON.stringify({ results: items }));
   }
 
   function handleCheckLibrary(args: Record<string, unknown>): ToolResult {

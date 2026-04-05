@@ -150,7 +150,7 @@ describe('search_games', () => {
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.equal(parsed.total, 2);
+      assert.equal(parsed.results.length, 2);
       assert.equal(parsed.results[0].title, 'Half-Life 2');
     }
   });
@@ -170,7 +170,6 @@ describe('search_games', () => {
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.equal(parsed.showing, 1);
       assert.equal(parsed.results.length, 1);
     }
   });
@@ -200,7 +199,6 @@ describe('search_games', () => {
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.equal(parsed.total, 0);
       assert.equal(parsed.results.length, 0);
     }
   });
