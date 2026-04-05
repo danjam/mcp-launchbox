@@ -25,7 +25,7 @@ export function createHandlers(
       results = results.filter((r) => matchesPlatform(r.item.Platform, platform));
     }
 
-    const items = results.slice(0, limit).map((r) => compactResult(r.item, fuseConfidence(r.score)));
+    const items = results.slice(0, limit).map((r) => compactResult(r.item, fuseConfidence(r.score!)));
 
     return ok(JSON.stringify({ results: items }));
   }
@@ -65,7 +65,7 @@ export function createHandlers(
       }
 
       const matches = fuzzyResults.flatMap((r) => {
-        const confidence = fuseConfidence(r.score);
+        const confidence = fuseConfidence(r.score!);
         return confidence >= CONFIDENCE_THRESHOLD ? [compactResult(r.item, confidence)] : [];
       });
 
@@ -109,7 +109,7 @@ export function createHandlers(
 
     const source = state.library.fuse
       .search(query)
-      .filter((r) => fuseConfidence(r.score) >= 0.5)
+      .filter((r) => fuseConfidence(r.score!) >= 0.5)
       .map((r) => r.item);
 
     const groups = new Map<string, { title: string; platforms: Set<string> }>();

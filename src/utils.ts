@@ -25,9 +25,8 @@ export function requireString(name: string, val: unknown): string | ToolResult {
 }
 
 // Fuse.js scores 0 (perfect) to 1 (worst match that passed threshold); invert so 1 is best.
-// Undefined score (when includeScore is misconfigured) is treated as perfect (0) via ?? 0.
-export function fuseConfidence(score: number | undefined): number {
-  return Math.round((1 - (score ?? 0)) * 100) / 100;
+export function fuseConfidence(score: number): number {
+  return Math.round((1 - score) * 100) / 100;
 }
 
 export function compactResult(

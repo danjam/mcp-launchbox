@@ -516,10 +516,6 @@ describe('utils', () => {
       assert.equal(fuseConfidence(1), 0);
     });
 
-    it('undefined score returns 1', () => {
-      assert.equal(fuseConfidence(undefined), 1);
-    });
-
     it('mid score rounds to 2 decimal places', () => {
       const result = fuseConfidence(0.333);
       assert.equal(result, 0.67);
