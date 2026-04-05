@@ -111,6 +111,7 @@ export async function loadGames(platformsPath: string): Promise<{
         }
         return games;
       } catch (e) {
+        // Intentional: fail the entire load rather than silently serving a partial library
         throw new Error(`Failed to parse platform file "${file}": ${e instanceof Error ? e.message : e}`);
       }
     }),
