@@ -142,6 +142,11 @@ export async function loadGames(platformsPath: string): Promise<{
         skipped++;
         continue;
       }
+      if (!game.Platform) {
+        console.warn(`Game "${game.Title}" (${game.ID}) has no platform — skipping`);
+        skipped++;
+        continue;
+      }
       if (gamesById.has(game.ID)) {
         console.warn(`Duplicate game ID "${game.ID}" (${game.Title}) — skipping`);
         skipped++;
@@ -153,7 +158,7 @@ export async function loadGames(platformsPath: string): Promise<{
   }
 
   if (skipped > 0) {
-    console.warn(`Skipped ${skipped} games (no ID, no title, or duplicate ID)`);
+    console.warn(`Skipped ${skipped} games (no ID, no title, no platform, or duplicate ID)`);
   }
   if (nanCount > 0) {
     console.warn(`${nanCount} non-numeric field values defaulted to 0`);

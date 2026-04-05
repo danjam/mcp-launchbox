@@ -74,6 +74,25 @@ describe('loadGames', () => {
     assert.ok(warnings.some((w) => w.includes('no ID')));
   });
 
+  it('skips games with no platform', async (t) => {
+    const warnings = [];
+    const origWarn = console.warn;
+    console.warn = (msg) => warnings.push(msg);
+    t.after(() => { console.warn = origWarn; });
+
+    await writeFile(
+      join(dir, 'Test.xml'),
+      gameXml([
+        { ID: 'a1', Title: 'Good', Platform: 'Windows' },
+        { ID: 'a2', Title: 'NoPlatform' },
+      ]),
+    );
+    const { games } = await loadGames(dir);
+    assert.equal(games.length, 1);
+    assert.equal(games[0].Title, 'Good');
+    assert.ok(warnings.some((w) => w.includes('no platform')));
+  });
+
   it('skips duplicate IDs', async (t) => {
     const warnings = [];
     const origWarn = console.warn;
