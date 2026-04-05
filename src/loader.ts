@@ -102,8 +102,15 @@ export async function loadGames(platformsPath: string): Promise<{
 
   const fileResults = await Promise.all(
     files.map(async (file) => {
+      let xml: string;
       try {
-        const xml = await readFile(join(platformsPath, file), 'utf-8');
+        xml = await readFile(join(platformsPath, file), 'utf-8');
+      } catch (e) {
+        // Intentional: fail the entire load rather than silently serving a partial library
+        const code = (e as NodeJS.ErrnoException).code;
+        throw new Error(`Failed to read "${file}" (${code ?? 'unknown'}): ${e instanceof Error ? e.message : e}`);
+      }
+      try {
         const parsed = parser.parse(xml);
         const games = (parsed?.LaunchBox?.Game ?? []) as Record<string, unknown>[];
         if (games.length === 0 && parsed && !parsed.LaunchBox) {
@@ -111,8 +118,7 @@ export async function loadGames(platformsPath: string): Promise<{
         }
         return games;
       } catch (e) {
-        // Intentional: fail the entire load rather than silently serving a partial library
-        throw new Error(`Failed to parse platform file "${file}": ${e instanceof Error ? e.message : e}`);
+        throw new Error(`Failed to parse XML in "${file}": ${e instanceof Error ? e.message : e}`);
       }
     }),
   );
