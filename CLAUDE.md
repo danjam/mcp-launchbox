@@ -37,7 +37,7 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 **Source files:**
 - `src/index.ts` — Entrypoint: JSON-RPC error code constants, I/O helpers (`send`, `reply`, `textReply`, `errorReply`, `error`), env var check, library loading, reload concurrency guard, request dispatch with structural validation, readline listener, stdout error handler
 - `src/handlers.ts` — `matchesPlatform` helper, `createHandlers(state, reload)` factory returning `Record<ToolName, ToolHandler>`; all 7 tool handler functions (sync except `handleReloadLibrary`)
-- `src/utils.ts` — Pure helpers: result constructors (`ok`, `fail`), argument validation (`asInt`, `asString`, `requireString`), search helpers (`fuseConfidence`, `compactResult`, `sortedPlatformCounts`)
+- `src/utils.ts` — Pure helpers: result constructors (`ok`, `fail`), argument validation (`parseLimit`, `asString`, `requireString`), search helpers (`fuseConfidence`, `compactResult`, `sortedPlatformCounts`)
 - `src/tools.ts` — Tool schema definitions with MCP annotations (`as const satisfies MCPToolDefinition[]`); derives `ToolName` union type for type-safe handler map
 - `src/loader.ts` — XML parsing with `htmlEntities`, game extraction, string interning (`loadGames`); Fuse.js index building, precomputed `platformCounts` and `duplicateGroups` (`buildLibrary`); exports `FUSE_OPTIONS` and `FUSE_TITLE_ONLY_OPTIONS`
 - `src/types.ts` — All type definitions: `Game`, `RequestId`, `ToolResult`, `ToolHandler`, `MCPToolAnnotations`, MCP interfaces
