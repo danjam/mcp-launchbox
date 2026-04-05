@@ -62,7 +62,7 @@ export const tools = [
   },
   {
     name: 'find_duplicates',
-    description: 'Find games owned on multiple platforms, grouped by title.',
+    description: 'Find duplicate game entries grouped by title — includes cross-platform and same-platform duplicates.',
     inputSchema: {
       type: 'object',
       properties: {

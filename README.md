@@ -120,7 +120,7 @@ Tool: `list_platforms`
 
 ### Find Duplicates
 
-Find games owned on multiple platforms, grouped by title.
+Find duplicate game entries grouped by title — includes cross-platform and same-platform duplicates.
 
 Tool: `find_duplicates`
 

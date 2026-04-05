@@ -121,13 +121,14 @@ function mockLibrary() {
   for (const g of games) {
     const key = g.Title.toLowerCase();
     let group = dupMap.get(key);
-    if (!group) { group = { title: g.Title, platforms: new Set() }; dupMap.set(key, group); }
+    if (!group) { group = { title: g.Title, platforms: new Set(), entries: 0 }; dupMap.set(key, group); }
     group.platforms.add(g.Platform);
+    group.entries++;
   }
   const duplicateGroups = [...dupMap.values()]
-    .filter((g) => g.platforms.size >= 2)
-    .map((g) => ({ title: g.title, platforms: [...g.platforms].sort(), count: g.platforms.size }))
-    .sort((a, b) => b.count - a.count);
+    .filter((g) => g.entries >= 2)
+    .map((g) => ({ title: g.title, platforms: [...g.platforms].sort(), entries: g.entries }))
+    .sort((a, b) => b.entries - a.entries);
   return { gamesById, gamesByTitle, games, fuse, fuseTitleOnly, platformCounts, duplicateGroups };
 }
 
@@ -380,7 +381,7 @@ describe('find_duplicates', () => {
       assert.equal(parsed.length, 1);
       assert.equal(parsed[0].title, 'Half-Life 2');
       assert.deepEqual(parsed[0].platforms, ['Linux', 'Windows']);
-      assert.equal(parsed[0].count, 2);
+      assert.equal(parsed[0].entries, 2);
     }
   });
 

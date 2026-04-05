@@ -112,21 +112,22 @@ export function createHandlers(
       .filter((r) => fuseConfidence(r.score!) >= 0.5)
       .map((r) => r.item);
 
-    const groups = new Map<string, { title: string; platforms: Set<string> }>();
+    const groups = new Map<string, { title: string; platforms: Set<string>; entries: number }>();
     for (const g of source) {
       const key = g.Title.toLowerCase();
       let group = groups.get(key);
       if (!group) {
-        group = { title: g.Title, platforms: new Set() };
+        group = { title: g.Title, platforms: new Set(), entries: 0 };
         groups.set(key, group);
       }
       group.platforms.add(g.Platform);
+      group.entries++;
     }
 
     const duplicates = [...groups.values()]
-      .filter((g) => g.platforms.size >= 2)
-      .map((g) => ({ title: g.title, platforms: [...g.platforms].sort(), count: g.platforms.size }))
-      .sort((a, b) => b.count - a.count)
+      .filter((g) => g.entries >= 2)
+      .map((g) => ({ title: g.title, platforms: [...g.platforms].sort(), entries: g.entries }))
+      .sort((a, b) => b.entries - a.entries)
       .slice(0, limit);
 
     return ok(JSON.stringify(duplicates));

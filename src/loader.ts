@@ -191,23 +191,24 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
   return { gamesById, gamesByTitle, games, fuse, fuseTitleOnly, platformCounts, duplicateGroups };
 }
 
-export type DuplicateGroup = { title: string; platforms: string[]; count: number };
+export type DuplicateGroup = { title: string; platforms: string[]; entries: number };
 
 function buildDuplicateGroups(games: readonly Game[]): DuplicateGroup[] {
-  const groups = new Map<string, { title: string; platforms: Set<string> }>();
+  const groups = new Map<string, { title: string; platforms: Set<string>; entries: number }>();
   for (const g of games) {
     const key = g.Title.toLowerCase();
     let group = groups.get(key);
     if (!group) {
-      group = { title: g.Title, platforms: new Set() };
+      group = { title: g.Title, platforms: new Set(), entries: 0 };
       groups.set(key, group);
     }
     group.platforms.add(g.Platform);
+    group.entries++;
   }
   return [...groups.values()]
-    .filter((g) => g.platforms.size >= 2)
-    .map((g) => ({ title: g.title, platforms: [...g.platforms].sort(), count: g.platforms.size }))
-    .sort((a, b) => b.count - a.count);
+    .filter((g) => g.entries >= 2)
+    .map((g) => ({ title: g.title, platforms: [...g.platforms].sort(), entries: g.entries }))
+    .sort((a, b) => b.entries - a.entries);
 }
 
 export interface Library {
