@@ -1,7 +1,7 @@
 import type { Library } from './loader.js';
 import type { ToolName } from './tools.js';
 import type { ToolHandler, ToolResult } from './types.js';
-import { asInt, asString, compactResult, fail, fuseConfidence, ok, requireString } from './utils.js';
+import { parseLimit, asString, compactResult, fail, fuseConfidence, ok, requireString } from './utils.js';
 
 function matchesPlatform(gamePlatform: string, filter: string): boolean {
   return gamePlatform.toLowerCase() === filter.toLowerCase();
@@ -16,7 +16,7 @@ export function createHandlers(
     if (typeof query !== 'string') return query;
     const platform = asString(args.platform);
     if (typeof platform === 'object') return platform;
-    const limit = asInt(args.limit, 25);
+    const limit = parseLimit(args.limit, 25);
     if (typeof limit !== 'number') return limit;
 
     let results = state.library.fuse.search(query);
@@ -34,7 +34,7 @@ export function createHandlers(
     const titles = args.games;
     if (!Array.isArray(titles) || titles.length === 0 || !titles.every((t) => typeof t === 'string'))
       return fail('games is required (array of strings)');
-    const maxTitles = asInt(args.limit, 100);
+    const maxTitles = parseLimit(args.limit, 100);
     if (typeof maxTitles !== 'number') return maxTitles;
     if (titles.length > maxTitles) return fail(`Too many titles (${titles.length}), max is ${maxTitles}`);
     const platform = asString(args.platform);
@@ -100,7 +100,7 @@ export function createHandlers(
   function handleFindDuplicates(args: Record<string, unknown>): ToolResult {
     const query = asString(args.query);
     if (typeof query === 'object') return query;
-    const limit = asInt(args.limit, 25);
+    const limit = parseLimit(args.limit, 25);
     if (typeof limit !== 'number') return limit;
 
     if (!query) {

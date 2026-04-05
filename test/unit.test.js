@@ -4,7 +4,7 @@ import Fuse from 'fuse.js';
 
 import { createHandlers } from '../dist/handlers.js';
 import { FUSE_OPTIONS, FUSE_TITLE_ONLY_OPTIONS } from '../dist/loader.js';
-import { asInt, asString, compactResult, fail, fuseConfidence, ok, requireString, sortedPlatformCounts } from '../dist/utils.js';
+import { parseLimit, asString, compactResult, fail, fuseConfidence, ok, requireString, sortedPlatformCounts } from '../dist/utils.js';
 
 
 /** @returns {import('../dist/types.js').Game[]} */
@@ -430,41 +430,41 @@ describe('utils', () => {
     });
   });
 
-  describe('asInt', () => {
+  describe('parseLimit', () => {
     it('returns fallback for undefined', () => {
-      assert.equal(asInt(undefined, 25), 25);
+      assert.equal(parseLimit(undefined, 25), 25);
     });
 
     it('returns fallback for null', () => {
-      assert.equal(asInt(null, 25), 25);
+      assert.equal(parseLimit(null, 25), 25);
     });
 
     it('returns valid integer', () => {
-      assert.equal(asInt(10, 25), 10);
+      assert.equal(parseLimit(10, 25), 10);
     });
 
     it('returns fail result for non-integer', () => {
-      const result = asInt('fifty', 25);
+      const result = parseLimit('fifty', 25);
       assert.equal(result.ok, false);
     });
 
     it('returns fail result for zero', () => {
-      const result = asInt(0, 25);
+      const result = parseLimit(0, 25);
       assert.equal(result.ok, false);
     });
 
     it('returns fail result for negative', () => {
-      const result = asInt(-5, 25);
+      const result = parseLimit(-5, 25);
       assert.equal(result.ok, false);
     });
 
     it('returns fail result for float', () => {
-      const result = asInt(2.5, 25);
+      const result = parseLimit(2.5, 25);
       assert.equal(result.ok, false);
     });
 
     it('accepts numeric strings (coerces to number)', () => {
-      assert.equal(asInt('10', 25), 10);
+      assert.equal(parseLimit('10', 25), 10);
     });
   });
 
