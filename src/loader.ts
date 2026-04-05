@@ -6,6 +6,7 @@ import type { Game } from './types.js';
 import { sortedPlatformCounts } from './utils.js';
 
 const stringCache = new Map<string, string>();
+let nanCount = 0;
 
 function intern(val: unknown): string {
   const str = toStr(val);
@@ -25,11 +26,11 @@ function toStr(val: unknown): string {
   return String(val);
 }
 
-function toNum(val: unknown, field?: string): number {
+function toNum(val: unknown): number {
   if (val === undefined || val === null || val === '') return 0;
   const n = Number(val);
   if (Number.isNaN(n)) {
-    console.warn(`Non-numeric value ${JSON.stringify(val)} in field ${field ?? 'unknown'} — defaulting to 0`);
+    nanCount++;
     return 0;
   }
   return n;
@@ -51,15 +52,15 @@ function extractGame(raw: Record<string, unknown>): Game {
     PlayMode: intern(raw.PlayMode),
     Rating: intern(raw.Rating),
     MaxPlayers: intern(raw.MaxPlayers),
-    CommunityStarRating: toNum(raw.CommunityStarRating, 'CommunityStarRating'),
-    StarRating: toNum(raw.StarRatingFloat, 'StarRatingFloat'),
+    CommunityStarRating: toNum(raw.CommunityStarRating),
+    StarRating: toNum(raw.StarRatingFloat),
     Status: intern(raw.Status),
     Favorite: toBool(raw.Favorite),
     DatabaseID: toStr(raw.DatabaseID),
     Hide: toBool(raw.Hide),
     Broken: toBool(raw.Broken),
-    PlayCount: toNum(raw.PlayCount, 'PlayCount'),
-    PlayTime: toNum(raw.PlayTime, 'PlayTime'),
+    PlayCount: toNum(raw.PlayCount),
+    PlayTime: toNum(raw.PlayTime),
     LastPlayedDate: toStr(raw.LastPlayedDate),
     DateAdded: toStr(raw.DateAdded),
     Installed: toBool(raw.Installed),
@@ -73,6 +74,7 @@ export async function loadGames(platformsPath: string): Promise<{
   games: Game[];
 }> {
   stringCache.clear();
+  nanCount = 0;
 
   let files: string[];
   try {
@@ -152,6 +154,9 @@ export async function loadGames(platformsPath: string): Promise<{
 
   if (skipped > 0) {
     console.warn(`Skipped ${skipped} games (no ID, no title, or duplicate ID)`);
+  }
+  if (nanCount > 0) {
+    console.warn(`${nanCount} non-numeric field values defaulted to 0`);
   }
 
   stringCache.clear();
