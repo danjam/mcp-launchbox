@@ -37,7 +37,7 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 **Source files:**
 - `src/index.ts` — Entrypoint: JSON-RPC error code constants, I/O helpers (`send`, `reply`, `textReply`, `errorReply`, `error`), env var check, library loading, reload concurrency guard, request dispatch with structural validation, readline listener, stdout error handler
 - `src/handlers.ts` — `matchesPlatform` helper, `createHandlers(state, reload)` factory returning `Record<ToolName, ToolHandler>`; all 7 tool handler functions (sync except `handleReloadLibrary`)
-- `src/utils.ts` — Pure helpers: result constructors (`ok`, `fail`), argument validation (`parseLimit`, `asString`, `requireString`), search helpers (`fuseConfidence`, `compactResult`, `sortedPlatformCounts`)
+- `src/utils.ts` — Pure helpers: result constructors (`ok`, `fail`), argument validation (`parseLimit`, `asString`, `requireString`), search helpers (`fuseConfidence(score: number)`, `compactResult`, `sortedPlatformCounts`)
 - `src/tools.ts` — Tool schema definitions with MCP annotations (`as const satisfies MCPToolDefinition[]`); derives `ToolName` union type for type-safe handler map
 - `src/loader.ts` — XML parsing with `htmlEntities`, game extraction, string interning (`loadGames`); Fuse.js index building, precomputed `platformCounts` and `duplicateGroups` (`buildLibrary`); exports `FUSE_OPTIONS` and `FUSE_TITLE_ONLY_OPTIONS`
 - `src/types.ts` — All type definitions: `Game`, `RequestId`, `ToolResult`, `ToolHandler`, `MCPToolAnnotations`, MCP interfaces
@@ -47,10 +47,12 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 **Data loading:**
 - `LAUNCHBOX_PLATFORMS_PATH` points directly at the directory containing platform XML files (one file per platform)
 - All XML is parsed and loaded into memory at startup (async parallel I/O)
-- Games with no ID, no title, or duplicate IDs are skipped with per-game and aggregate warnings to stderr
-- XML files with non-`<LaunchBox>` root elements are warned and skipped; ENOENT and ENOTDIR get helpful error messages
+- Games with no ID, no title, no platform, or duplicate IDs are skipped with per-game and aggregate warnings to stderr
+- Non-numeric field values are counted and logged as an aggregate warning (not per-game)
+- File I/O errors and XML parse errors are reported separately with distinct messages; ENOENT and ENOTDIR get helpful error messages
+- XML files with non-`<LaunchBox>` root elements are warned and skipped
 - In-memory index: `Map<id, Game>` for O(1) lookup, Fuse.js indexes for fuzzy search
-- Precomputed at build time: `platformCounts` (sorted) and `duplicateGroups` for O(1) access
+- Precomputed at build time: `platformCounts` (sorted) and `duplicateGroups` (cross-platform and same-platform, by `entries` count) for O(1) access
 - String interning on repetitive fields (Platform, Developer, Genre, etc.) to reduce memory; cache cleared after loading
 - `buildLibrary()` returns a `Library` object held in a mutable `state` ref so `reload_library` can swap it
 - Concurrent `reload_library` calls coalesce (second call awaits the first)
