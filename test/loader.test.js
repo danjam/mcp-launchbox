@@ -257,6 +257,10 @@ describe('buildLibrary', () => {
     assert.equal(lib.gamesByTitle.get('portal').length, 1);
     assert.ok(lib.fuse);
     assert.ok(lib.fuseTitleOnly);
+    assert.equal(lib.platformFuse.size, 2);
+    assert.ok(lib.platformFuse.get('windows'));
+    assert.ok(lib.platformFuse.get('linux'));
+    assert.equal(lib.platformFuseTitleOnly.size, 2);
   });
 
   it('fuse search returns results', async () => {
@@ -268,5 +272,23 @@ describe('buildLibrary', () => {
     const results = lib.fuse.search('Half-Life');
     assert.equal(results.length, 1);
     assert.equal(results[0].item.Title, 'Half-Life 2');
+  });
+
+  it('per-platform fuse indexes only search their platform', async () => {
+    await writeFile(
+      join(dir, 'Test.xml'),
+      gameXml([
+        { ID: 'a1', Title: 'Half-Life 2', Platform: 'Windows' },
+        { ID: 'a2', Title: 'Half-Life 2', Platform: 'Linux' },
+        { ID: 'a3', Title: 'Portal', Platform: 'Windows' },
+      ]),
+    );
+    const lib = await buildLibrary(dir);
+    const windowsResults = lib.platformFuse.get('windows').search('Half-Life');
+    assert.equal(windowsResults.length, 1);
+    assert.equal(windowsResults[0].item.Platform, 'Windows');
+    const linuxResults = lib.platformFuse.get('linux').search('Half-Life');
+    assert.equal(linuxResults.length, 1);
+    assert.equal(linuxResults[0].item.Platform, 'Linux');
   });
 });

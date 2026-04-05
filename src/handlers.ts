@@ -19,11 +19,10 @@ export function createHandlers(
     const limit = parseLimit(args.limit, 25);
     if (typeof limit !== 'number') return limit;
 
-    let results = state.library.fuse.search(query);
-
-    if (platform) {
-      results = results.filter((r) => matchesPlatform(r.item.Platform, platform));
-    }
+    const index = platform
+      ? state.library.platformFuse.get(platform.toLowerCase()) ?? state.library.fuse
+      : state.library.fuse;
+    const results = index.search(query);
 
     const items = results.slice(0, limit).map((r) => compactResult(r.item, fuseConfidence(r.score!)));
 
@@ -58,11 +57,10 @@ export function createHandlers(
       }
 
       // Slow path: fuzzy search (title only)
-      let fuzzyResults = state.library.fuseTitleOnly.search(query);
-
-      if (platform) {
-        fuzzyResults = fuzzyResults.filter((r) => matchesPlatform(r.item.Platform, platform));
-      }
+      const titleIndex = platform
+        ? state.library.platformFuseTitleOnly.get(platform.toLowerCase()) ?? state.library.fuseTitleOnly
+        : state.library.fuseTitleOnly;
+      const fuzzyResults = titleIndex.search(query);
 
       const matches = fuzzyResults.flatMap((r) => {
         const confidence = fuseConfidence(r.score!);

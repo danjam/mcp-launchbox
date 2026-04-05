@@ -116,6 +116,21 @@ function mockLibrary() {
   }
   const fuse = new Fuse(games, FUSE_OPTIONS);
   const fuseTitleOnly = new Fuse(games, FUSE_TITLE_ONLY_OPTIONS);
+
+  const byPlatform = new Map();
+  for (const g of games) {
+    const key = g.Platform.toLowerCase();
+    let list = byPlatform.get(key);
+    if (!list) { list = []; byPlatform.set(key, list); }
+    list.push(g);
+  }
+  const platformFuse = new Map();
+  const platformFuseTitleOnly = new Map();
+  for (const [key, pGames] of byPlatform) {
+    platformFuse.set(key, new Fuse(pGames, FUSE_OPTIONS));
+    platformFuseTitleOnly.set(key, new Fuse(pGames, FUSE_TITLE_ONLY_OPTIONS));
+  }
+
   const platformCounts = sortedPlatformCounts(games);
   const dupMap = new Map();
   for (const g of games) {
@@ -129,7 +144,10 @@ function mockLibrary() {
     .filter((g) => g.entries >= 2)
     .map((g) => ({ title: g.title, platforms: [...g.platforms].sort(), entries: g.entries }))
     .sort((a, b) => b.entries - a.entries);
-  return { gamesById, gamesByTitle, games, fuse, fuseTitleOnly, platformCounts, duplicateGroups };
+  return {
+    gamesById, gamesByTitle, games, fuse, fuseTitleOnly,
+    platformFuse, platformFuseTitleOnly, platformCounts, duplicateGroups,
+  };
 }
 
 function setup() {

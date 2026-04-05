@@ -201,10 +201,31 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
     list.push(g);
   }
 
+  const byPlatform = new Map<string, Game[]>();
+  for (const g of games) {
+    const key = g.Platform.toLowerCase();
+    let list = byPlatform.get(key);
+    if (!list) {
+      list = [];
+      byPlatform.set(key, list);
+    }
+    list.push(g);
+  }
+
+  const platformFuse = new Map<string, Fuse<Game>>();
+  const platformFuseTitleOnly = new Map<string, Fuse<Game>>();
+  for (const [key, pGames] of byPlatform) {
+    platformFuse.set(key, new Fuse(pGames, FUSE_OPTIONS));
+    platformFuseTitleOnly.set(key, new Fuse(pGames, FUSE_TITLE_ONLY_OPTIONS));
+  }
+
   const platformCounts = sortedPlatformCounts(games);
   const duplicateGroups = buildDuplicateGroups(games);
 
-  return { gamesById, gamesByTitle, games, fuse, fuseTitleOnly, platformCounts, duplicateGroups };
+  return {
+    gamesById, gamesByTitle, games, fuse, fuseTitleOnly,
+    platformFuse, platformFuseTitleOnly, platformCounts, duplicateGroups,
+  };
 }
 
 export type DuplicateGroup = { title: string; platforms: string[]; entries: number };
@@ -233,6 +254,8 @@ export interface Library {
   readonly games: readonly Game[];
   readonly fuse: Fuse<Game>;
   readonly fuseTitleOnly: Fuse<Game>;
+  readonly platformFuse: ReadonlyMap<string, Fuse<Game>>;
+  readonly platformFuseTitleOnly: ReadonlyMap<string, Fuse<Game>>;
   readonly platformCounts: readonly { platform: string; count: number }[];
   readonly duplicateGroups: readonly DuplicateGroup[];
 }
