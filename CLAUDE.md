@@ -37,7 +37,7 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 **Source files:**
 - `src/index.ts` — Entrypoint: JSON-RPC error code constants, I/O helpers (`send`, `reply`, `textReply`, `errorReply`, `error`), env var check, library loading, reload concurrency guard, request dispatch with structural validation, readline listener, stdout error handler
 - `src/handlers.ts` — `matchesPlatform` helper, `createHandlers(state, reload)` factory returning `Record<ToolName, ToolHandler>`; all 7 tool handler functions (sync except `handleReloadLibrary`)
-- `src/utils.ts` — Pure helpers: result constructors (`ok`, `fail`), argument validation (`parseLimit`, `asString`, `requireString`), search helpers (`fuseConfidence(score: number)`, `normaliseTitle`, `tokenSet`, `hasTokenContainment`, `compactResult`, `sortedPlatformCounts`), response formatting (`formatPlayTime`, `emptyToNull`)
+- `src/utils.ts` — Pure helpers: result constructors (`ok`, `fail`), argument validation (`parseLimit`, `asString`, `requireString`), search helpers (`fuseConfidence(score: number)`, `normaliseTitle`, `compactResult`, `sortedPlatformCounts`), response formatting (`formatPlayTime`, `emptyToNull`)
 - `src/tools.ts` — Tool schema definitions with MCP annotations (`as const satisfies MCPToolDefinition[]`); derives `ToolName` union type for type-safe handler map
 - `src/loader.ts` — XML parsing with `htmlEntities`, game extraction, string interning (`loadGames`); Fuse.js index building (full + per-platform + title-only variants), `gamesByTitle` (lowercase) and `gamesByNormalisedTitle` maps for fast-path lookups, `normalisingGetFn` custom Fuse getter for punctuation-normalised matching, precomputed `platformCounts` and `duplicateGroups` (`buildLibrary`); exports `FUSE_OPTIONS` and `FUSE_TITLE_ONLY_OPTIONS`
 - `src/types.ts` — All type definitions: `Game`, `RequestId`, `ToolResult`, `ToolHandler`, `MCPToolAnnotations`, MCP interfaces
@@ -66,7 +66,7 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 - `playTime` is always `{seconds, hours}` (hours rounded to 1 decimal)
 - `get_game_details` returns camelCase keys, `genres` as an array (split from semicolons), empty strings as `null`
 - `search_games` and `check_library` accept an optional `exact` param to disable punctuation normalisation
-- `check_library` includes `nearMisses` (up to 3 candidates) when `matches` is empty, via two admission paths: structural (bidirectional token-set containment with min-2-token guard) and BM25 (confidence ≥0.55). Structural candidates are listed first.
+- `check_library` includes `nearMisses` (up to 3 candidates with confidence 0.40–0.84) when `matches` is empty
 
 **Key dependencies:** `fast-xml-parser` for XML parsing, `fuse.js` for fuzzy search.
 
@@ -83,8 +83,7 @@ Biome enforces: single quotes, trailing commas, 2-space indent, 120 char line wi
 
 ## Notes
 
-- Fuse.js threshold is 0.3 with `ignoreLocation: true` and `useTokenSearch: true` — BM25-style IDF weighting so rare tokens (game-specific proper nouns) rank higher than common words. Pinned to `fuse.js@7.4.0-beta.4`; upgrade to stable when 7.4.0 ships
-- Known issue: short single-token queries can false-positive against longer titles containing the query as a substring (e.g. "Gord" → "Flash Gordon" at 0.99). Tracked in #2
+- Fuse.js threshold is 0.3 with `ignoreLocation: true` — tuned for accurate matching with typo tolerance and no positional penalty for mid-title matches
 
 ## Gotchas
 

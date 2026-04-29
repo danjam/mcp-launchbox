@@ -77,7 +77,7 @@ Replace `/path/to/mcp-launchbox` with the actual path where you cloned the proje
 
 ### Search Games
 
-Search the game library by title. Uses fuzzy matching with BM25-style token weighting — rare/distinctive words in your query (like game-specific proper nouns) are weighted higher than common words. Punctuation (dashes, colons, `&`/`and`) is normalised before matching by default.
+Search the game library by title. Uses fuzzy matching across title and series fields. Punctuation (dashes, colons, `&`/`and`) is normalised before matching by default.
 
 Confidence scale: 1.0 = perfect match, ≥0.85 = very likely, ≥0.65 = probable, <0.65 = speculative. Use `get_game_details` for full metadata.
 
@@ -92,7 +92,7 @@ Tool: `search_games`
 
 ### Check Library
 
-Check which games from a list are already in the library. Uses exact title matching first, then fuzzy matching — only matches with confidence ≥0.85 are included to avoid false positives. When no match is found, `nearMisses` shows up to 3 close candidates via two paths: structural admission (the query's tokens contain all of a library title's tokens, or vice versa) and BM25 scoring (confidence ≥0.55). Punctuation is normalised before matching by default.
+Check which games from a list are already in the library. Uses exact title matching first, then fuzzy matching — only matches with confidence ≥0.85 are included to avoid false positives. When no match is found, `nearMisses` shows up to 3 close candidates for diagnostics. Punctuation is normalised before matching by default.
 
 Designed for bundle duplicate checking — pass all the titles in one call instead of searching one at a time. Omit `platform` to check across all platforms (recommended for bundles).
 

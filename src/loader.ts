@@ -185,7 +185,6 @@ export const FUSE_OPTIONS: IFuseOptions<Game> = {
   threshold: 0.3,
   ignoreLocation: true,
   includeScore: true,
-  useTokenSearch: true,
   getFn: normalisingGetFn,
 };
 
@@ -194,7 +193,6 @@ export const FUSE_TITLE_ONLY_OPTIONS: IFuseOptions<Game> = {
   threshold: 0.3,
   ignoreLocation: true,
   includeScore: true,
-  useTokenSearch: true,
   getFn: normalisingGetFn,
 };
 
@@ -245,16 +243,8 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
   const duplicateGroups = buildDuplicateGroups(games);
 
   return {
-    gamesById,
-    gamesByTitle,
-    gamesByNormalisedTitle,
-    games,
-    fuse,
-    fuseTitleOnly,
-    platformFuse,
-    platformFuseTitleOnly,
-    platformCounts,
-    duplicateGroups,
+    gamesById, gamesByTitle, gamesByNormalisedTitle, games, fuse, fuseTitleOnly,
+    platformFuse, platformFuseTitleOnly, platformCounts, duplicateGroups,
   };
 }
 
