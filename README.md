@@ -77,9 +77,9 @@ Replace `/path/to/mcp-launchbox` with the actual path where you cloned the proje
 
 ### Search Games
 
-Search the game library by title. Uses fuzzy matching across title and series fields.
+Search the game library by title. Uses fuzzy matching across title and series fields. Punctuation (dashes, colons, `&`/`and`) is normalised before matching by default.
 
-Each result includes: id, title, platform, installed status, play time, and a confidence score (0-1, higher is better). Use `get_game_details` for full metadata.
+Confidence scale: 1.0 = perfect match, ≥0.85 = very likely, ≥0.65 = probable, <0.65 = speculative. Use `get_game_details` for full metadata.
 
 Tool: `search_games`
 
@@ -88,10 +88,13 @@ Tool: `search_games`
 | `query` | string | Yes | Search text to match against titles and series |
 | `platform` | string | No | Filter by platform name |
 | `limit` | number | No | Max results to return (default 25) |
+| `exact` | boolean | No | Disable punctuation normalisation (default false) |
 
 ### Check Library
 
-Check which games from a list are already in the library. Uses exact title matching first, then fuzzy matching with a 0.85 confidence threshold. Designed for bundle duplicate checking — pass all the titles in one call instead of searching one at a time. Omit `platform` to check across all platforms (recommended for bundles). Returns matches with confidence scores and a summary of how many you own vs. how many are new.
+Check which games from a list are already in the library. Uses exact title matching first, then fuzzy matching — only matches with confidence ≥0.85 are included to avoid false positives. When no match is found, `nearMisses` shows up to 3 close candidates for diagnostics. Punctuation is normalised before matching by default.
+
+Designed for bundle duplicate checking — pass all the titles in one call instead of searching one at a time. Omit `platform` to check across all platforms (recommended for bundles).
 
 Tool: `check_library`
 
@@ -100,10 +103,11 @@ Tool: `check_library`
 | `games` | string[] | Yes | Array of game title strings to look up |
 | `platform` | string | No | Filter matches to a specific platform |
 | `limit` | number | No | Max titles to process (default 100) |
+| `exact` | boolean | No | Disable punctuation normalisation (default false) |
 
 ### Get Game Details
 
-Get full details for a specific game by its ID. Returns all metadata including title, platform, developer, genre, series, ratings, and play data such as play count, play time, installed status, and more.
+Get full details for a specific game by its ID. Returns all metadata in camelCase: title, platform, developer, genres (array), series, ratings (communityStarRating and starRating, both 0–5), playTime ({seconds, hours}), installed status, and more. String fields are `null` when empty/missing.
 
 Tool: `get_game_details`
 
