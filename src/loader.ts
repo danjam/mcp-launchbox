@@ -185,6 +185,7 @@ export const FUSE_OPTIONS: IFuseOptions<Game> = {
   threshold: 0.3,
   ignoreLocation: true,
   includeScore: true,
+  useTokenSearch: true,
   getFn: normalisingGetFn,
 };
 
@@ -193,6 +194,7 @@ export const FUSE_TITLE_ONLY_OPTIONS: IFuseOptions<Game> = {
   threshold: 0.3,
   ignoreLocation: true,
   includeScore: true,
+  useTokenSearch: true,
   getFn: normalisingGetFn,
 };
 

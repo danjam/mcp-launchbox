@@ -237,6 +237,46 @@ describe('search_games', () => {
     const result = await handlers.search_games({ query: 'test', limit: 0 });
     assert.equal(result.ok, false);
   });
+
+  it('matches subtitle drop query', async () => {
+    const result = await handlers.search_games({ query: 'Half-Life' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.ok(parsed.results.length > 0);
+      assert.equal(parsed.results[0].title, 'Half-Life 2');
+    }
+  });
+
+  it('matches query with extra words', async () => {
+    const result = await handlers.search_games({ query: 'Half-Life 2 game' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.ok(parsed.results.length > 0);
+      assert.equal(parsed.results[0].title, 'Half-Life 2');
+    }
+  });
+
+  it('matches query with typo in distinctive token', async () => {
+    const result = await handlers.search_games({ query: 'Haf-Life 2' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.ok(parsed.results.length > 0);
+      assert.equal(parsed.results[0].title, 'Half-Life 2');
+    }
+  });
+
+  it('matches query with typo in common token', async () => {
+    const result = await handlers.search_games({ query: 'Half-Lfe 2' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.ok(parsed.results.length > 0);
+      assert.equal(parsed.results[0].title, 'Half-Life 2');
+    }
+  });
 });
 
 describe('get_game_details', () => {
@@ -352,7 +392,8 @@ describe('check_library', () => {
   });
 
   it('returns nearMisses for close but below-threshold results', async () => {
-    const result = await handlers.check_library({ games: ['Half-Life 3'] });
+    // "Portal 2" fuzzy-matches "Portal" but below the 0.85 owned threshold
+    const result = await handlers.check_library({ games: ['Portal 2'] });
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
@@ -422,6 +463,16 @@ describe('check_library', () => {
   it('rejects non-string platform', async () => {
     const result = await handlers.check_library({ games: ['test'], platform: 42 });
     assert.equal(result.ok, false);
+  });
+
+  it('does not match base game for DLC-style query', async () => {
+    const result = await handlers.check_library({ games: ['Half-Life 2: Episode One'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.results[0].matches.length, 0);
+      assert.equal(parsed.summary.new, 1);
+    }
   });
 });
 
