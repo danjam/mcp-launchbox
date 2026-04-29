@@ -4,7 +4,9 @@ import Fuse from 'fuse.js';
 
 import { createHandlers } from '../dist/handlers.js';
 import { FUSE_OPTIONS, FUSE_TITLE_ONLY_OPTIONS } from '../dist/loader.js';
-import { parseLimit, asString, compactResult, fail, fuseConfidence, ok, requireString, sortedPlatformCounts } from '../dist/utils.js';
+import {
+  normaliseTitle, parseLimit, asString, compactResult, fail, fuseConfidence, ok, requireString, sortedPlatformCounts,
+} from '../dist/utils.js';
 
 
 /** @returns {import('../dist/types.js').Game[]} */
@@ -105,6 +107,7 @@ function mockLibrary() {
   const games = mockGames();
   const gamesById = new Map(games.map((g) => [g.ID, g]));
   const gamesByTitle = new Map();
+  const gamesByNormalisedTitle = new Map();
   for (const g of games) {
     const key = g.Title.toLowerCase();
     let list = gamesByTitle.get(key);
@@ -113,6 +116,14 @@ function mockLibrary() {
       gamesByTitle.set(key, list);
     }
     list.push(g);
+
+    const nKey = normaliseTitle(g.Title);
+    let nList = gamesByNormalisedTitle.get(nKey);
+    if (!nList) {
+      nList = [];
+      gamesByNormalisedTitle.set(nKey, nList);
+    }
+    nList.push(g);
   }
   const fuse = new Fuse(games, FUSE_OPTIONS);
   const fuseTitleOnly = new Fuse(games, FUSE_TITLE_ONLY_OPTIONS);
@@ -145,7 +156,7 @@ function mockLibrary() {
     .map((g) => ({ title: g.title, platforms: [...g.platforms].sort(), entries: g.entries }))
     .sort((a, b) => b.entries - a.entries);
   return {
-    gamesById, gamesByTitle, games, fuse, fuseTitleOnly,
+    gamesById, gamesByTitle, gamesByNormalisedTitle, games, fuse, fuseTitleOnly,
     platformFuse, platformFuseTitleOnly, platformCounts, duplicateGroups,
   };
 }
@@ -523,6 +534,38 @@ describe('utils', () => {
     it('returns fail for non-string', () => {
       const result = requireString('x', 123);
       assert.equal(result.ok, false);
+    });
+  });
+
+  describe('normaliseTitle', () => {
+    it('lowercases', () => {
+      assert.equal(normaliseTitle('Half-Life'), 'half life');
+    });
+
+    it('replaces dashes and colons with spaces', () => {
+      assert.equal(normaliseTitle('Wrath - Enhanced: Edition'), 'wrath enhanced edition');
+    });
+
+    it('replaces en-dash and em-dash with spaces', () => {
+      assert.equal(normaliseTitle('A–B—C'), 'a b c');
+    });
+
+    it('replaces & with and', () => {
+      assert.equal(normaliseTitle('Lock & Key'), 'lock and key');
+    });
+
+    it('converts smart quotes to straight quotes', () => {
+      assert.equal(normaliseTitle('‘hello’ “world”'), "'hello' \"world\"");
+    });
+
+    it('collapses whitespace', () => {
+      assert.equal(normaliseTitle('  a   b  '), 'a b');
+    });
+
+    it('handles the pathfinder case', () => {
+      const a = normaliseTitle('Pathfinder: Wrath of the Righteous - Enhanced Edition');
+      const b = normaliseTitle('Pathfinder: Wrath of the Righteous: Enhanced Edition');
+      assert.equal(a, b);
     });
   });
 

@@ -24,6 +24,17 @@ export function requireString(name: string, val: unknown): string | ToolResult {
   return fail(`${name} is required (string)`);
 }
 
+export function normaliseTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[-–—:]/g, ' ')
+    .replace(/&/g, 'and')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // Fuse.js scores 0 (perfect) to 1 (worst match that passed threshold); invert so 1 is best.
 export function fuseConfidence(score: number): number {
   return Math.round((1 - score) * 100) / 100;

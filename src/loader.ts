@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import Fuse, { type IFuseOptions } from 'fuse.js';
 import type { Game } from './types.js';
-import { sortedPlatformCounts } from './utils.js';
+import { normaliseTitle, sortedPlatformCounts } from './utils.js';
 
 const stringCache = new Map<string, string>();
 let nanCount = 0;
@@ -168,6 +168,15 @@ export async function loadGames(platformsPath: string): Promise<{
   return { gamesById, games };
 }
 
+const defaultGetFn = Fuse.config.getFn;
+
+function normalisingGetFn(obj: Game, path: string | string[]): readonly string[] | string {
+  const val = defaultGetFn(obj, path);
+  if (typeof val === 'string') return normaliseTitle(val);
+  if (Array.isArray(val)) return val.map((v) => (typeof v === 'string' ? normaliseTitle(v) : ''));
+  return val;
+}
+
 export const FUSE_OPTIONS: IFuseOptions<Game> = {
   keys: [
     { name: 'Title', weight: 1 },
@@ -176,6 +185,7 @@ export const FUSE_OPTIONS: IFuseOptions<Game> = {
   threshold: 0.3,
   ignoreLocation: true,
   includeScore: true,
+  getFn: normalisingGetFn,
 };
 
 export const FUSE_TITLE_ONLY_OPTIONS: IFuseOptions<Game> = {
@@ -183,6 +193,7 @@ export const FUSE_TITLE_ONLY_OPTIONS: IFuseOptions<Game> = {
   threshold: 0.3,
   ignoreLocation: true,
   includeScore: true,
+  getFn: normalisingGetFn,
 };
 
 export async function buildLibrary(platformsPath: string): Promise<Library> {
@@ -191,14 +202,23 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
   const fuseTitleOnly = new Fuse(games, FUSE_TITLE_ONLY_OPTIONS);
 
   const gamesByTitle = new Map<string, Game[]>();
+  const gamesByNormalisedTitle = new Map<string, Game[]>();
   for (const g of games) {
-    const key = g.Title.toLowerCase();
-    let list = gamesByTitle.get(key);
+    const lower = g.Title.toLowerCase();
+    let list = gamesByTitle.get(lower);
     if (!list) {
       list = [];
-      gamesByTitle.set(key, list);
+      gamesByTitle.set(lower, list);
     }
     list.push(g);
+
+    const normalised = normaliseTitle(g.Title);
+    let nList = gamesByNormalisedTitle.get(normalised);
+    if (!nList) {
+      nList = [];
+      gamesByNormalisedTitle.set(normalised, nList);
+    }
+    nList.push(g);
   }
 
   const byPlatform = new Map<string, Game[]>();
@@ -223,7 +243,7 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
   const duplicateGroups = buildDuplicateGroups(games);
 
   return {
-    gamesById, gamesByTitle, games, fuse, fuseTitleOnly,
+    gamesById, gamesByTitle, gamesByNormalisedTitle, games, fuse, fuseTitleOnly,
     platformFuse, platformFuseTitleOnly, platformCounts, duplicateGroups,
   };
 }
@@ -251,6 +271,7 @@ function buildDuplicateGroups(games: readonly Game[]): DuplicateGroup[] {
 export interface Library {
   readonly gamesById: ReadonlyMap<string, Game>;
   readonly gamesByTitle: ReadonlyMap<string, readonly Game[]>;
+  readonly gamesByNormalisedTitle: ReadonlyMap<string, readonly Game[]>;
   readonly games: readonly Game[];
   readonly fuse: Fuse<Game>;
   readonly fuseTitleOnly: Fuse<Game>;

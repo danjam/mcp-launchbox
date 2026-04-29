@@ -1,7 +1,9 @@
 import type { Library } from './loader.js';
 import type { ToolName } from './tools.js';
 import type { ToolHandler, ToolResult } from './types.js';
-import { parseLimit, asString, compactResult, fail, formatPlayTime, fuseConfidence, ok, requireString } from './utils.js';
+import {
+  parseLimit, asString, compactResult, fail, formatPlayTime, fuseConfidence, normaliseTitle, ok, requireString,
+} from './utils.js';
 
 function matchesPlatform(gamePlatform: string, filter: string): boolean {
   return gamePlatform.toLowerCase() === filter.toLowerCase();
@@ -18,11 +20,12 @@ export function createHandlers(
     if (typeof platform === 'object') return platform;
     const limit = parseLimit(args.limit, 25);
     if (typeof limit !== 'number') return limit;
+    const exact = args.exact === true;
 
     const index = platform
       ? state.library.platformFuse.get(platform.toLowerCase()) ?? state.library.fuse
       : state.library.fuse;
-    const results = index.search(query);
+    const results = index.search(exact ? query : normaliseTitle(query));
 
     const items = results.slice(0, limit).map((r) => compactResult(r.item, fuseConfidence(r.score!)));
 
@@ -38,13 +41,14 @@ export function createHandlers(
     if (titles.length > maxTitles) return fail(`Too many titles (${titles.length}), max is ${maxTitles}`);
     const platform = asString(args.platform);
     if (typeof platform === 'object') return platform;
+    const exact = args.exact === true;
     // High threshold — check_library is for bundle duplicate checking, so
     // false positives (claiming you own a game you don't) are worse than misses
     const CONFIDENCE_THRESHOLD = 0.85;
 
     const results = titles.map((query) => {
-      // Fast path: case-insensitive title match
-      let candidates = state.library.gamesByTitle.get(query.toLowerCase());
+      const titleMap = exact ? state.library.gamesByTitle : state.library.gamesByNormalisedTitle;
+      let candidates = titleMap.get(exact ? query.toLowerCase() : normaliseTitle(query));
 
       if (candidates) {
         if (platform) {
@@ -60,7 +64,7 @@ export function createHandlers(
       const titleIndex = platform
         ? state.library.platformFuseTitleOnly.get(platform.toLowerCase()) ?? state.library.fuseTitleOnly
         : state.library.fuseTitleOnly;
-      const fuzzyResults = titleIndex.search(query);
+      const fuzzyResults = titleIndex.search(exact ? query : normaliseTitle(query));
 
       const matches = fuzzyResults.flatMap((r) => {
         const confidence = fuseConfidence(r.score!);
