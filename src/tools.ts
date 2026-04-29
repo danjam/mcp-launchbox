@@ -4,7 +4,7 @@ export const tools = [
   {
     name: 'search_games',
     description:
-      'Search the LaunchBox game library by title and series. Returns compact results with id, title, platform, installed status, play time, and a confidence score (0–1 scale: 1.0 = perfect match, ≥0.85 = very likely the same game, ≥0.65 = probable match, <0.65 = speculative). Uses a fuzzy threshold of 0.3 — results below that are not returned. Use the id from results to call get_game_details for full metadata.',
+      'Search the LaunchBox game library by title and series. Confidence scale: 1.0 = perfect, ≥0.85 = very likely, ≥0.65 = probable, <0.65 = speculative. Use id from results to call get_game_details for full metadata.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -20,7 +20,7 @@ export const tools = [
   {
     name: 'check_library',
     description:
-      'Check which games from a list are already in the library. Accepts an array of game titles and returns matches for each. Uses exact title matching first (confidence 1.0), then fuzzy title-only matching. Only matches with confidence ≥0.85 are included — this high threshold avoids false positives when checking bundle ownership. Confidence scale: 1.0 = exact title match, ≥0.85 = very likely the same game. Designed for bundle duplicate checking — replaces calling search_games per title. Omit platform to check across all platforms (recommended for bundles).',
+      'Check which games from a list are already in the library. Only matches with confidence ≥0.85 are included to avoid false positives. When matches is empty, nearMisses shows up to 3 close candidates for diagnostics. Designed for bundle duplicate checking — replaces calling search_games per title. Omit platform to check across all platforms (recommended for bundles).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -41,7 +41,7 @@ export const tools = [
   {
     name: 'get_game_details',
     description:
-      'Get full details for a specific game by ID. Returns all metadata including title, platform, developer, genre, series, ratings, and play data such as play count, play time, installed status, and more.',
+      'Get full details for a specific game by ID. Rating scales: communityStarRating and starRating are both 0–5. progress is a free-form string from LaunchBox (e.g. "Not Started / Unplayed", "Completed").',
     inputSchema: {
       type: 'object',
       properties: {
@@ -64,7 +64,8 @@ export const tools = [
   },
   {
     name: 'find_duplicates',
-    description: 'Find duplicate game entries grouped by title — includes cross-platform and same-platform duplicates.',
+    description:
+      'Find duplicate game entries grouped by title — includes cross-platform and same-platform duplicates. Optional query filters by fuzzy title match.',
     inputSchema: {
       type: 'object',
       properties: {
