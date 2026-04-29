@@ -92,7 +92,7 @@ Tool: `search_games`
 
 ### Check Library
 
-Check which games from a list are already in the library. Uses exact title matching first, then fuzzy matching — only matches with confidence ≥0.85 are included to avoid false positives. When no match is found, `nearMisses` shows up to 3 close candidates for diagnostics. Punctuation is normalised before matching by default.
+Check which games from a list are already in the library. Uses exact title matching first, then fuzzy matching — only matches with confidence ≥0.85 are included to avoid false positives. When no match is found, `nearMisses` shows up to 5 close candidates for diagnostics. Punctuation is normalised before matching by default.
 
 Designed for bundle duplicate checking — pass all the titles in one call instead of searching one at a time. Omit `platform` to check across all platforms (recommended for bundles).
 

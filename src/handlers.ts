@@ -75,7 +75,7 @@ export function createHandlers(
         const confidence = fuseConfidence(r.score!);
         if (confidence >= CONFIDENCE_THRESHOLD) {
           matches.push(compactResult(r.item, confidence));
-        } else if (confidence >= NEAR_MISS_FLOOR && nearMisses.length < 3) {
+        } else if (confidence >= NEAR_MISS_FLOOR && nearMisses.length < 5) {
           nearMisses.push({ title: r.item.Title, platform: r.item.Platform, confidence });
         }
       }
