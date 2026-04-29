@@ -336,7 +336,23 @@ describe('check_library', () => {
     if (result.ok) {
       const parsed = JSON.parse(result.text);
       assert.equal(parsed.results[0].matches.length, 0);
+      assert.deepEqual(parsed.results[0].nearMisses, []);
       assert.equal(parsed.summary.new, 1);
+    }
+  });
+
+  it('returns nearMisses for close but below-threshold results', async () => {
+    const result = await handlers.check_library({ games: ['Half-Life 3'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      const entry = parsed.results[0];
+      assert.equal(entry.matches.length, 0);
+      assert.ok(entry.nearMisses.length > 0, 'expected at least one near miss');
+      assert.ok(entry.nearMisses[0].confidence < 0.85);
+      assert.ok(entry.nearMisses[0].confidence >= 0.4);
+      assert.ok(entry.nearMisses[0].title);
+      assert.ok(entry.nearMisses[0].platform);
     }
   });
 

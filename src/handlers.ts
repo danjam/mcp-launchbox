@@ -66,12 +66,21 @@ export function createHandlers(
         : state.library.fuseTitleOnly;
       const fuzzyResults = titleIndex.search(exact ? query : normaliseTitle(query));
 
-      const matches = fuzzyResults.flatMap((r) => {
-        const confidence = fuseConfidence(r.score!);
-        return confidence >= CONFIDENCE_THRESHOLD ? [compactResult(r.item, confidence)] : [];
-      });
+      const NEAR_MISS_FLOOR = 0.4;
+      const matches: ReturnType<typeof compactResult>[] = [];
+      const nearMisses: { title: string; platform: string; confidence: number }[] = [];
 
-      return { query, matches };
+      for (const r of fuzzyResults) {
+        const confidence = fuseConfidence(r.score!);
+        if (confidence >= CONFIDENCE_THRESHOLD) {
+          matches.push(compactResult(r.item, confidence));
+        } else if (confidence >= NEAR_MISS_FLOOR && nearMisses.length < 3) {
+          nearMisses.push({ title: r.item.Title, platform: r.item.Platform, confidence });
+        }
+      }
+
+      if (matches.length > 0) return { query, matches };
+      return { query, matches, nearMisses };
     });
 
     const owned = results.filter((r) => r.matches.length > 0).length;
