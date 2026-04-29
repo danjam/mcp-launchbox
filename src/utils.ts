@@ -40,6 +40,10 @@ export function fuseConfidence(score: number): number {
   return Math.round((1 - score) * 100) / 100;
 }
 
+export function emptyToNull(val: string): string | null {
+  return val === '' ? null : val;
+}
+
 export function formatPlayTime(seconds: number): { seconds: number; hours: number } {
   return { seconds, hours: Math.round((seconds / 3600) * 10) / 10 };
 }

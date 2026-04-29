@@ -2,7 +2,8 @@ import type { Library } from './loader.js';
 import type { ToolName } from './tools.js';
 import type { ToolHandler, ToolResult } from './types.js';
 import {
-  parseLimit, asString, compactResult, fail, formatPlayTime, fuseConfidence, normaliseTitle, ok, requireString,
+  parseLimit, asString, compactResult, emptyToNull, fail, formatPlayTime, fuseConfidence, normaliseTitle, ok,
+  requireString,
 } from './utils.js';
 
 function matchesPlatform(gamePlatform: string, filter: string): boolean {
@@ -99,10 +100,36 @@ export function createHandlers(
     const game = state.library.gamesById.get(id);
     if (!game) return fail(`Game not found: ${id}`);
 
-    const { Notes: _notes, PlayTime: rawPlayTime, ...gameData } = game;
-    const base = { ...gameData, PlayTime: formatPlayTime(rawPlayTime) };
-    if (args.include_notes === true) return ok(JSON.stringify({ ...base, Notes: _notes }));
-    return ok(JSON.stringify(base));
+    const detail: Record<string, unknown> = {
+      id: game.ID,
+      title: game.Title,
+      platform: game.Platform,
+      developer: emptyToNull(game.Developer),
+      publisher: emptyToNull(game.Publisher),
+      genres: game.Genre ? game.Genre.split(';').map((s) => s.trim()) : [],
+      releaseDate: emptyToNull(game.ReleaseDate),
+      source: emptyToNull(game.Source),
+      series: emptyToNull(game.Series),
+      playMode: emptyToNull(game.PlayMode),
+      rating: emptyToNull(game.Rating),
+      maxPlayers: game.MaxPlayers ? Number(game.MaxPlayers) || null : null,
+      communityStarRating: Math.round(game.CommunityStarRating * 10) / 10,
+      starRating: game.StarRating,
+      status: emptyToNull(game.Status),
+      favorite: game.Favorite,
+      databaseId: Number(game.DatabaseID) || null,
+      hide: game.Hide,
+      broken: game.Broken,
+      playCount: game.PlayCount,
+      playTime: formatPlayTime(game.PlayTime),
+      lastPlayedDate: emptyToNull(game.LastPlayedDate),
+      dateAdded: emptyToNull(game.DateAdded),
+      installed: game.Installed,
+      completed: game.Completed,
+      progress: emptyToNull(game.Progress),
+    };
+    if (args.include_notes === true) detail.notes = emptyToNull(game.Notes);
+    return ok(JSON.stringify(detail));
   }
 
   function handleListPlatforms(): ToolResult {

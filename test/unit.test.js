@@ -30,7 +30,7 @@ function mockGames() {
       StarRating: 5,
       Status: '',
       Favorite: true,
-      DatabaseID: 'db-1',
+      DatabaseID: '203774',
       Hide: false,
       Broken: false,
       PlayCount: 10,
@@ -242,14 +242,24 @@ describe('search_games', () => {
 describe('get_game_details', () => {
   const { handlers } = setup();
 
-  it('returns game data', async () => {
+  it('returns camelCase game data', async () => {
     const result = await handlers.get_game_details({ id: 'aaa-111' });
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.equal(parsed.Title, 'Half-Life 2');
-      assert.equal(parsed.Platform, 'Windows');
-      assert.equal(parsed.Notes, undefined);
+      assert.equal(parsed.title, 'Half-Life 2');
+      assert.equal(parsed.platform, 'Windows');
+      assert.equal(parsed.developer, 'Valve');
+      assert.deepEqual(parsed.genres, ['FPS']);
+      assert.deepEqual(parsed.playTime, { seconds: 3600, hours: 1 });
+      assert.equal(parsed.communityStarRating, 4.5);
+      assert.equal(parsed.starRating, 5);
+      assert.equal(parsed.databaseId, 203774);
+      assert.equal(parsed.maxPlayers, null);
+      assert.equal(parsed.notes, undefined);
+      // Empty strings become null
+      assert.equal(parsed.source, null);
+      assert.equal(parsed.series, 'Half-Life');
     }
   });
 
@@ -258,7 +268,7 @@ describe('get_game_details', () => {
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.equal(parsed.Notes, 'Classic FPS');
+      assert.equal(parsed.notes, 'Classic FPS');
     }
   });
 
@@ -267,7 +277,7 @@ describe('get_game_details', () => {
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.equal(parsed.Notes, undefined);
+      assert.equal(parsed.notes, undefined);
     }
   });
 
