@@ -5,7 +5,9 @@ import Fuse from 'fuse.js';
 import { createHandlers } from '../dist/handlers.js';
 import { FUSE_OPTIONS, FUSE_TITLE_ONLY_OPTIONS } from '../dist/loader.js';
 import {
-  normaliseTitle, parseLimit, asString, compactResult, fail, fuseConfidence, ok, requireString, sortedPlatformCounts,
+  normaliseTitle, parseLimit, asString, compactResult, fail, fuseConfidence, ok,
+  passesSingleTokenTitleGuard,
+  requireString, sortedPlatformCounts,
 } from '../dist/utils.js';
 
 
@@ -658,6 +660,44 @@ describe('utils', () => {
     it('mid score rounds to 2 decimal places', () => {
       const result = fuseConfidence(0.333);
       assert.equal(result, 0.67);
+    });
+  });
+
+  // Regression for #2: a single-token query like "gord" must not match
+  // "flash gordon" (mid-token substring of the second token).
+  describe('passesSingleTokenTitleGuard', () => {
+    it('rejects single-token query that is only a mid-token substring (#2)', () => {
+      assert.equal(passesSingleTokenTitleGuard('gord', 'flash gordon'), false);
+    });
+
+    it('accepts single-token query that matches a complete title token', () => {
+      assert.equal(passesSingleTokenTitleGuard('halo', 'halo 2'), true);
+    });
+
+    it('accepts a small typo within the per-length tolerance (typos via Bitap stay)', () => {
+      // 5-char query vs a 5-char title token, single-char substitution.
+      // tolerance = floor(5/4) = 1, so this passes.
+      assert.equal(passesSingleTokenTitleGuard('starss', 'starsx'), true);
+    });
+
+    it('rejects a single-token query when no title token is close enough', () => {
+      assert.equal(passesSingleTokenTitleGuard('zzzzz', 'half-life 2'), false);
+    });
+
+    it('passes through multi-token queries unchanged (multi-token gets IDF)', () => {
+      assert.equal(passesSingleTokenTitleGuard('flash gord', 'flash gordon'), true);
+      assert.equal(passesSingleTokenTitleGuard('flash gord', 'half-life 2'), true);
+    });
+
+    it('handles short queries strictly (3-char query: exact only)', () => {
+      assert.equal(passesSingleTokenTitleGuard('rim', 'rimworld'), false);
+      assert.equal(passesSingleTokenTitleGuard('rim', 'rim runner'), true);
+    });
+
+    it('treats title hyphens as token separators (normalisation contract)', () => {
+      // `normaliseTitle('half-life 2')` produces `'half life 2'`, so the
+      // guard sees three tokens and `half` matches as a whole token.
+      assert.equal(passesSingleTokenTitleGuard('half', 'half life 2'), true);
     });
   });
 

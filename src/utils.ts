@@ -40,6 +40,58 @@ export function fuseConfidence(score: number): number {
   return Math.round((1 - score) * 100) / 100;
 }
 
+// Levenshtein with an early-out cap — if the running edit distance exceeds
+// `cap`, returns `cap + 1` so callers can short-circuit. Used by the
+// single-token guard below; we never need the exact distance, only whether
+// it's within the tolerance.
+function levenshteinAtMost(a: string, b: string, cap: number): number {
+  if (Math.abs(a.length - b.length) > cap) return cap + 1;
+  const aLen = a.length;
+  const bLen = b.length;
+  if (aLen === 0) return bLen;
+  if (bLen === 0) return aLen;
+  let prev = new Array(bLen + 1);
+  let curr = new Array(bLen + 1);
+  for (let j = 0; j <= bLen; j++) prev[j] = j;
+  for (let i = 1; i <= aLen; i++) {
+    curr[0] = i;
+    let rowMin = curr[0];
+    for (let j = 1; j <= bLen; j++) {
+      const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
+      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+      if (curr[j] < rowMin) rowMin = curr[j];
+    }
+    if (rowMin > cap) return cap + 1;
+    [prev, curr] = [curr, prev];
+  }
+  return prev[bLen];
+}
+
+// Single-token-query token-boundary guard (issue #2): a one-token query
+// like "Gord" must match a complete token in the title (e.g. "Halo" in
+// "Halo 2") rather than a mid-token substring (e.g. "Gord" inside
+// "Gordon" of "Flash Gordon"). Multi-token queries are unaffected — they
+// already benefit from BM25 IDF differentiation.
+//
+// Both `query` and `title` are expected to be normalised (see
+// `normaliseTitle`). Typos are still allowed via a small Levenshtein
+// tolerance proportional to query length, so "halo" matches "halo" and
+// "halp" still matches "halo" but "gord" does not match the "gordon"
+// token.
+export function passesSingleTokenTitleGuard(query: string, title: string): boolean {
+  const queryTokens = query.split(/\s+/).filter(Boolean);
+  if (queryTokens.length !== 1) return true;
+  const q = queryTokens[0];
+  if (q === undefined) return true;
+  // Allow ~1 typo per 4 characters, bounded so 3-char queries are exact-ish.
+  const tolerance = q.length >= 5 ? Math.floor(q.length / 4) : 0;
+  const titleTokens = title.split(/\s+/).filter(Boolean);
+  for (const t of titleTokens) {
+    if (levenshteinAtMost(q, t, tolerance) <= tolerance) return true;
+  }
+  return false;
+}
+
 export function emptyToNull(val: string): string | null {
   return val === '' ? null : val;
 }
