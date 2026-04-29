@@ -1,7 +1,7 @@
 import type { Library } from './loader.js';
 import type { ToolName } from './tools.js';
 import type { ToolHandler, ToolResult } from './types.js';
-import { parseLimit, asString, compactResult, fail, fuseConfidence, ok, requireString } from './utils.js';
+import { parseLimit, asString, compactResult, fail, formatPlayTime, fuseConfidence, ok, requireString } from './utils.js';
 
 function matchesPlatform(gamePlatform: string, filter: string): boolean {
   return gamePlatform.toLowerCase() === filter.toLowerCase();
@@ -86,9 +86,10 @@ export function createHandlers(
     const game = state.library.gamesById.get(id);
     if (!game) return fail(`Game not found: ${id}`);
 
-    const { Notes: _notes, ...gameData } = game;
-    if (args.include_notes === true) return ok(JSON.stringify({ ...gameData, Notes: _notes }));
-    return ok(JSON.stringify(gameData));
+    const { Notes: _notes, PlayTime: rawPlayTime, ...gameData } = game;
+    const base = { ...gameData, PlayTime: formatPlayTime(rawPlayTime) };
+    if (args.include_notes === true) return ok(JSON.stringify({ ...base, Notes: _notes }));
+    return ok(JSON.stringify(base));
   }
 
   function handleListPlatforms(): ToolResult {

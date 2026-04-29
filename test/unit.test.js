@@ -549,7 +549,7 @@ describe('utils', () => {
       assert.equal(result.title, 'Half-Life 2');
       assert.equal(result.platform, 'Windows');
       assert.equal(result.installed, true);
-      assert.equal(result.playTime, 3600);
+      assert.deepEqual(result.playTime, { seconds: 3600, hours: 1 });
       assert.equal(result.confidence, 0.95);
     });
 

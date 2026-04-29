@@ -29,16 +29,27 @@ export function fuseConfidence(score: number): number {
   return Math.round((1 - score) * 100) / 100;
 }
 
+export function formatPlayTime(seconds: number): { seconds: number; hours: number } {
+  return { seconds, hours: Math.round((seconds / 3600) * 10) / 10 };
+}
+
 export function compactResult(
   game: Game,
   confidence: number,
-): { id: string; title: string; platform: string; installed: boolean; playTime: number; confidence: number } {
+): {
+  id: string;
+  title: string;
+  platform: string;
+  installed: boolean;
+  playTime: { seconds: number; hours: number };
+  confidence: number;
+} {
   return {
     id: game.ID,
     title: game.Title,
     platform: game.Platform,
     installed: game.Installed,
-    playTime: game.PlayTime,
+    playTime: formatPlayTime(game.PlayTime),
     confidence,
   };
 }
