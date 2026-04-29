@@ -245,8 +245,16 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
   const duplicateGroups = buildDuplicateGroups(games);
 
   return {
-    gamesById, gamesByTitle, gamesByNormalisedTitle, games, fuse, fuseTitleOnly,
-    platformFuse, platformFuseTitleOnly, platformCounts, duplicateGroups,
+    gamesById,
+    gamesByTitle,
+    gamesByNormalisedTitle,
+    games,
+    fuse,
+    fuseTitleOnly,
+    platformFuse,
+    platformFuseTitleOnly,
+    platformCounts,
+    duplicateGroups,
   };
 }
 

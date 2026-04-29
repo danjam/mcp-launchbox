@@ -2,8 +2,18 @@ import type { Library } from './loader.js';
 import type { ToolName } from './tools.js';
 import type { ToolHandler, ToolResult } from './types.js';
 import {
-  parseLimit, asString, compactResult, emptyToNull, fail, formatPlayTime, fuseConfidence, normaliseTitle, ok,
+  asString,
+  compactResult,
+  emptyToNull,
+  fail,
+  formatPlayTime,
+  fuseConfidence,
+  hasTokenContainment,
+  normaliseTitle,
+  ok,
+  parseLimit,
   requireString,
+  tokenSet,
 } from './utils.js';
 
 function matchesPlatform(gamePlatform: string, filter: string): boolean {
@@ -24,7 +34,7 @@ export function createHandlers(
     const exact = args.exact === true;
 
     const index = platform
-      ? state.library.platformFuse.get(platform.toLowerCase()) ?? state.library.fuse
+      ? (state.library.platformFuse.get(platform.toLowerCase()) ?? state.library.fuse)
       : state.library.fuse;
     const results = index.search(exact ? query : normaliseTitle(query));
 
@@ -63,22 +73,29 @@ export function createHandlers(
 
       // Slow path: fuzzy search (title only)
       const titleIndex = platform
-        ? state.library.platformFuseTitleOnly.get(platform.toLowerCase()) ?? state.library.fuseTitleOnly
+        ? (state.library.platformFuseTitleOnly.get(platform.toLowerCase()) ?? state.library.fuseTitleOnly)
         : state.library.fuseTitleOnly;
       const fuzzyResults = titleIndex.search(exact ? query : normaliseTitle(query));
 
-      const NEAR_MISS_FLOOR = 0.4;
+      const NEAR_MISS_FLOOR = 0.55;
+      const NEAR_MISS_CAP = 3;
+      const queryTokens = tokenSet(query);
       const matches: ReturnType<typeof compactResult>[] = [];
-      const nearMisses: { title: string; platform: string; confidence: number }[] = [];
+      const structural: { title: string; platform: string; confidence: number }[] = [];
+      const bm25: { title: string; platform: string; confidence: number }[] = [];
 
       for (const r of fuzzyResults) {
         const confidence = fuseConfidence(r.score!);
         if (confidence >= CONFIDENCE_THRESHOLD) {
           matches.push(compactResult(r.item, confidence));
-        } else if (confidence >= NEAR_MISS_FLOOR && nearMisses.length < 3) {
-          nearMisses.push({ title: r.item.Title, platform: r.item.Platform, confidence });
+        } else if (hasTokenContainment(queryTokens, tokenSet(r.item.Title))) {
+          structural.push({ title: r.item.Title, platform: r.item.Platform, confidence });
+        } else if (confidence >= NEAR_MISS_FLOOR) {
+          bm25.push({ title: r.item.Title, platform: r.item.Platform, confidence });
         }
       }
+
+      const nearMisses = [...structural, ...bm25].slice(0, NEAR_MISS_CAP);
 
       if (matches.length > 0) return { query, matches };
       return { query, matches, nearMisses };

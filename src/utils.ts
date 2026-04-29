@@ -69,6 +69,26 @@ export function compactResult(
   };
 }
 
+export function tokenSet(title: string): ReadonlySet<string> {
+  const tokens = normaliseTitle(title).split(' ');
+  return new Set(tokens.filter((t) => t.length > 0));
+}
+
+function isSubset(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  for (const item of a) {
+    if (!b.has(item)) return false;
+  }
+  return true;
+}
+
+export function hasTokenContainment(queryTokens: ReadonlySet<string>, libraryTokens: ReadonlySet<string>): boolean {
+  if (queryTokens.size === 0 || libraryTokens.size === 0) return false;
+  if (queryTokens.size === libraryTokens.size) return false;
+  const smaller = queryTokens.size < libraryTokens.size ? queryTokens : libraryTokens;
+  if (smaller.size < 2) return false;
+  return isSubset(queryTokens, libraryTokens) || isSubset(libraryTokens, queryTokens);
+}
+
 export function sortedPlatformCounts(games: readonly Game[]): { platform: string; count: number }[] {
   const counts = new Map<string, number>();
   for (const g of games) {

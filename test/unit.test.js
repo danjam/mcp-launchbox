@@ -5,7 +5,8 @@ import Fuse from 'fuse.js';
 import { createHandlers } from '../dist/handlers.js';
 import { FUSE_OPTIONS, FUSE_TITLE_ONLY_OPTIONS } from '../dist/loader.js';
 import {
-  normaliseTitle, parseLimit, asString, compactResult, fail, fuseConfidence, ok, requireString, sortedPlatformCounts,
+  normaliseTitle, parseLimit, asString, compactResult, fail, fuseConfidence, hasTokenContainment, ok, requireString,
+  sortedPlatformCounts, tokenSet,
 } from '../dist/utils.js';
 
 
@@ -96,6 +97,93 @@ function mockGames() {
       LastPlayedDate: '2024-02-01',
       DateAdded: '2023-02-01',
       Installed: true,
+      Completed: false,
+      Progress: '',
+    },
+    {
+      ID: 'ddd-444',
+      Title: 'DOOM',
+      Platform: 'Windows',
+      Developer: 'id Software',
+      Publisher: '',
+      Genre: 'FPS',
+      ReleaseDate: '1993-12-10',
+      Notes: '',
+      Source: '',
+      Series: '',
+      PlayMode: '',
+      Rating: '',
+      MaxPlayers: '',
+      CommunityStarRating: 0,
+      StarRating: 0,
+      Status: '',
+      Favorite: false,
+      DatabaseID: '',
+      Hide: false,
+      Broken: false,
+      PlayCount: 0,
+      PlayTime: 0,
+      LastPlayedDate: '',
+      DateAdded: '',
+      Installed: false,
+      Completed: false,
+      Progress: '',
+    },
+    {
+      ID: 'eee-555',
+      Title: 'Asterigos: Curse of the Stars',
+      Platform: 'Windows',
+      Developer: '',
+      Publisher: '',
+      Genre: 'Action RPG',
+      ReleaseDate: '',
+      Notes: '',
+      Source: '',
+      Series: '',
+      PlayMode: '',
+      Rating: '',
+      MaxPlayers: '',
+      CommunityStarRating: 0,
+      StarRating: 0,
+      Status: '',
+      Favorite: false,
+      DatabaseID: '',
+      Hide: false,
+      Broken: false,
+      PlayCount: 0,
+      PlayTime: 0,
+      LastPlayedDate: '',
+      DateAdded: '',
+      Installed: false,
+      Completed: false,
+      Progress: '',
+    },
+    {
+      ID: 'fff-666',
+      Title: 'One',
+      Platform: 'Windows',
+      Developer: '',
+      Publisher: '',
+      Genre: '',
+      ReleaseDate: '',
+      Notes: '',
+      Source: '',
+      Series: '',
+      PlayMode: '',
+      Rating: '',
+      MaxPlayers: '',
+      CommunityStarRating: 0,
+      StarRating: 0,
+      Status: '',
+      Favorite: false,
+      DatabaseID: '',
+      Hide: false,
+      Broken: false,
+      PlayCount: 0,
+      PlayTime: 0,
+      LastPlayedDate: '',
+      DateAdded: '',
+      Installed: false,
       Completed: false,
       Progress: '',
     },
@@ -342,7 +430,7 @@ describe('list_platforms', () => {
     if (result.ok) {
       const parsed = JSON.parse(result.text);
       assert.equal(parsed[0].platform, 'Windows');
-      assert.equal(parsed[0].count, 2);
+      assert.equal(parsed[0].count, 5);
       assert.equal(parsed[1].platform, 'Linux');
       assert.equal(parsed[1].count, 1);
     }
@@ -357,7 +445,7 @@ describe('get_stats', () => {
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.equal(parsed.totalGames, 3);
+      assert.equal(parsed.totalGames, 6);
       assert.equal(parsed.totalPlatforms, 2);
       assert.equal(parsed.topPlatforms.length, 2);
     }
@@ -391,8 +479,7 @@ describe('check_library', () => {
     }
   });
 
-  it('returns nearMisses for close but below-threshold results', async () => {
-    // "Portal 2" fuzzy-matches "Portal" but below the 0.85 owned threshold
+  it('returns nearMisses via BM25 for close but below-threshold results', async () => {
     const result = await handlers.check_library({ games: ['Portal 2'] });
     assert.equal(result.ok, true);
     if (result.ok) {
@@ -401,7 +488,7 @@ describe('check_library', () => {
       assert.equal(entry.matches.length, 0);
       assert.ok(entry.nearMisses.length > 0, 'expected at least one near miss');
       assert.ok(entry.nearMisses[0].confidence < 0.85);
-      assert.ok(entry.nearMisses[0].confidence >= 0.4);
+      assert.ok(entry.nearMisses[0].confidence >= 0.55);
       assert.ok(entry.nearMisses[0].title);
       assert.ok(entry.nearMisses[0].platform);
     }
@@ -465,13 +552,79 @@ describe('check_library', () => {
     assert.equal(result.ok, false);
   });
 
-  it('does not match base game for DLC-style query', async () => {
+  it('does not match base game for extended-title query', async () => {
     const result = await handlers.check_library({ games: ['Half-Life 2: Episode One'] });
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
       assert.equal(parsed.results[0].matches.length, 0);
       assert.equal(parsed.summary.new, 1);
+    }
+  });
+
+  it('structurally admits related base title to nearMisses', async () => {
+    const result = await handlers.check_library({ games: ['Half-Life 2: Episode One'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      const entry = parsed.results[0];
+      const titles = entry.nearMisses.map((nm) => nm.title);
+      assert.ok(titles.includes('Half-Life 2'), 'Half-Life 2 should appear in nearMisses via structural admission');
+    }
+  });
+
+  it('does not structurally admit single-token titles', async () => {
+    const result = await handlers.check_library({ games: ['Half-Life 2: Episode One'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      const entry = parsed.results[0];
+      const titles = entry.nearMisses.map((nm) => nm.title);
+      assert.ok(!titles.includes('One'), 'single-token title "One" must not be structurally admitted');
+    }
+  });
+
+  // Known limitation: single-token library titles with long extended-title queries fall below
+  // the BM25 0.55 floor and aren't structurally admitted (min-2-token guard). Short extensions
+  // like "Hades II" work fine (Hades scores 0.72). If a future improvement (e.g. DF-based
+  // exception or smarter heuristic) addresses this, update this test as part of that work.
+  it('does not surface single-token base game for long extended-title query', async () => {
+    const result = await handlers.check_library({ games: ['DOOM: The Dark Ages'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      const entry = parsed.results[0];
+      assert.equal(entry.matches.length, 0);
+      const titles = entry.nearMisses.map((nm) => nm.title);
+      assert.ok(!titles.includes('DOOM'), 'DOOM should not appear — single-token structural blocked by min-2-token guard, BM25 score too low for 4-token query');
+    }
+  });
+
+  it('produces empty nearMisses for genuinely absent games', async () => {
+    const result = await handlers.check_library({ games: ['A Guidebook of Babel', 'Air Hares', 'Nomad Idle'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      for (const entry of parsed.results) {
+        assert.deepEqual(entry.nearMisses, [], `"${entry.query}" should produce empty nearMisses, not noise`);
+      }
+    }
+  });
+
+  // Asterigos is not structurally admitted (token sets aren't subsets of each other) and
+  // scores 0.36 in this small mock library — below the 0.55 BM25 floor. In the live library
+  // (~25k games) it scores 0.56 due to different IDF weighting and is the calibration case
+  // for the 0.55 floor. This test verifies the routing: Asterigos must not be structurally
+  // admitted, so it can only appear via BM25 if the score is high enough.
+  it('does not structurally admit Asterigos (token sets are not subsets)', async () => {
+    const result = await handlers.check_library({ games: ['Asterigos & The Curse'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      const entry = parsed.results[0];
+      assert.equal(entry.matches.length, 0);
+      const asterigos = entry.nearMisses.find((nm) => nm.title === 'Asterigos: Curse of the Stars');
+      assert.equal(asterigos, undefined, 'Asterigos should not be structurally admitted — "and" ∉ library tokens, "of"/"stars" ∉ query tokens');
     }
   });
 });
@@ -515,7 +668,7 @@ describe('reload_library', () => {
     if (result.ok) {
       const parsed = JSON.parse(result.text);
       assert.equal(parsed.reloaded, true);
-      assert.equal(parsed.games, 3);
+      assert.equal(parsed.games, 6);
       assert.equal(parsed.platforms, 2);
     }
   });
@@ -680,6 +833,57 @@ describe('utils', () => {
     });
   });
 
+  describe('tokenSet', () => {
+    it('normalises and splits into tokens', () => {
+      assert.deepEqual(tokenSet('Half-Life 2'), new Set(['half', 'life', '2']));
+    });
+
+    it('normalises punctuation', () => {
+      assert.deepEqual(tokenSet('Half-Life 2: Episode One'), new Set(['half', 'life', '2', 'episode', 'one']));
+    });
+
+    it('returns empty set for empty string', () => {
+      assert.deepEqual(tokenSet(''), new Set());
+    });
+  });
+
+  describe('hasTokenContainment', () => {
+    it('detects library tokens as subset of query tokens', () => {
+      const query = tokenSet('Half-Life 2: Episode One');
+      const lib = tokenSet('Half-Life 2');
+      assert.equal(hasTokenContainment(query, lib), true);
+    });
+
+    it('detects query tokens as subset of library tokens', () => {
+      const query = tokenSet('Half-Life 2');
+      const lib = tokenSet('Half-Life 2: Lost Coast');
+      assert.equal(hasTokenContainment(query, lib), true);
+    });
+
+    it('rejects when neither is a subset', () => {
+      const query = tokenSet('Asterigos & The Curse');
+      const lib = tokenSet('Asterigos: Curse of the Stars');
+      assert.equal(hasTokenContainment(query, lib), false);
+    });
+
+    it('rejects single-token contained set', () => {
+      const query = tokenSet('Half-Life 2: Episode One');
+      const lib = tokenSet('One');
+      assert.equal(hasTokenContainment(query, lib), false);
+    });
+
+    it('rejects when token sets are equal size', () => {
+      const query = tokenSet('Half-Life 2');
+      const lib = tokenSet('Half-Life 3');
+      assert.equal(hasTokenContainment(query, lib), false);
+    });
+
+    it('rejects empty sets', () => {
+      assert.equal(hasTokenContainment(new Set(), new Set(['a'])), false);
+      assert.equal(hasTokenContainment(new Set(['a']), new Set()), false);
+    });
+  });
+
   describe('sortedPlatformCounts', () => {
     it('returns empty array for empty input', () => {
       assert.deepEqual(sortedPlatformCounts([]), []);
@@ -689,7 +893,7 @@ describe('utils', () => {
       const games = mockGames();
       const result = sortedPlatformCounts(games);
       assert.equal(result[0].platform, 'Windows');
-      assert.equal(result[0].count, 2);
+      assert.equal(result[0].count, 5);
       assert.equal(result[1].platform, 'Linux');
       assert.equal(result[1].count, 1);
     });
