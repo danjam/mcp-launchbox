@@ -83,7 +83,8 @@ Biome enforces: single quotes, trailing commas, 2-space indent, 120 char line wi
 
 ## Notes
 
-- Fuse.js threshold is 0.3 with `ignoreLocation: true` — tuned for accurate matching with typo tolerance and no positional penalty for mid-title matches
+- Fuse.js threshold is 0.3 with `ignoreLocation: true` and `useTokenSearch: true` — BM25-style IDF weighting so rare tokens (game-specific proper nouns) rank higher than common words. Pinned to `fuse.js@7.4.0-beta.4`; upgrade to stable when 7.4.0 ships
+- Known issue: short single-token queries can false-positive against longer titles containing the query as a substring (e.g. "Gord" → "Flash Gordon" at 0.99). Tracked in #2
 
 ## Gotchas
 

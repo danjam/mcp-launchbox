@@ -77,7 +77,7 @@ Replace `/path/to/mcp-launchbox` with the actual path where you cloned the proje
 
 ### Search Games
 
-Search the game library by title. Uses fuzzy matching across title and series fields. Punctuation (dashes, colons, `&`/`and`) is normalised before matching by default.
+Search the game library by title. Uses fuzzy matching with BM25-style token weighting — rare/distinctive words in your query (like game-specific proper nouns) are weighted higher than common words. Punctuation (dashes, colons, `&`/`and`) is normalised before matching by default.
 
 Confidence scale: 1.0 = perfect match, ≥0.85 = very likely, ≥0.65 = probable, <0.65 = speculative. Use `get_game_details` for full metadata.
 
