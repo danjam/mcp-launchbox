@@ -29,7 +29,7 @@ export function normaliseTitle(title: string): string {
     .toLowerCase()
     .replace(/[‘’]/g, "'")
     .replace(/[“”]/g, '"')
-    .replace(/[-–—:]/g, ' ')
+    .replace(/[--, :]/g, ' ')
     .replace(/&/g, 'and')
     .replace(/\s+/g, ' ')
     .trim();
@@ -40,7 +40,7 @@ export function fuseConfidence(score: number): number {
   return Math.round((1 - score) * 100) / 100;
 }
 
-// Levenshtein with an early-out cap — if the running edit distance exceeds
+// Levenshtein with an early-out cap, if the running edit distance exceeds
 // `cap`, returns `cap + 1` so callers can short-circuit. Used by the
 // single-token guard below; we never need the exact distance, only whether
 // it's within the tolerance.
@@ -70,7 +70,7 @@ function levenshteinAtMost(a: string, b: string, cap: number): number {
 // Single-token-query token-boundary guard (issue #2): a one-token query
 // like "Gord" must match a complete token in the title (e.g. "Halo" in
 // "Halo 2") rather than a mid-token substring (e.g. "Gord" inside
-// "Gordon" of "Flash Gordon"). Multi-token queries are unaffected — they
+// "Gordon" of "Flash Gordon"). Multi-token queries are unaffected, they
 // already benefit from BM25 IDF differentiation.
 //
 // Both `query` and `title` are expected to be normalised (see

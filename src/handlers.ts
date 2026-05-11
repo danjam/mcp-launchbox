@@ -52,7 +52,7 @@ export function createHandlers(
     const platform = asString(args.platform);
     if (typeof platform === 'object') return platform;
     const exact = args.exact === true;
-    // High threshold — check_library is for bundle duplicate checking, so
+    // High threshold, check_library is for bundle duplicate checking, so
     // false positives (claiming you own a game you don't) are worse than misses
     const CONFIDENCE_THRESHOLD = 0.85;
 

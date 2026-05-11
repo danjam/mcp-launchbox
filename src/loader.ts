@@ -116,7 +116,7 @@ export async function loadGames(platformsPath: string): Promise<{
         const parsed = parser.parse(xml);
         const games = (parsed?.LaunchBox?.Game ?? []) as Record<string, unknown>[];
         if (games.length === 0 && parsed && !parsed.LaunchBox) {
-          console.warn(`"${file}" has no <LaunchBox> root element — skipping`);
+          console.warn(`"${file}" has no <LaunchBox> root element, skipping`);
         }
         return games;
       } catch (e) {
@@ -133,22 +133,22 @@ export async function loadGames(platformsPath: string): Promise<{
     for (const raw of rawGames) {
       const game = extractGame(raw);
       if (!game.ID) {
-        console.warn(`Game "${game.Title}" on ${game.Platform} has no ID — skipping`);
+        console.warn(`Game "${game.Title}" on ${game.Platform} has no ID, skipping`);
         skipped++;
         continue;
       }
       if (!game.Title) {
-        console.warn(`Game ${game.ID} on ${game.Platform} has no title — skipping`);
+        console.warn(`Game ${game.ID} on ${game.Platform} has no title, skipping`);
         skipped++;
         continue;
       }
       if (!game.Platform) {
-        console.warn(`Game "${game.Title}" (${game.ID}) has no platform — skipping`);
+        console.warn(`Game "${game.Title}" (${game.ID}) has no platform, skipping`);
         skipped++;
         continue;
       }
       if (gamesById.has(game.ID)) {
-        console.warn(`Duplicate game ID "${game.ID}" (${game.Title}) — skipping`);
+        console.warn(`Duplicate game ID "${game.ID}" (${game.Title}), skipping`);
         skipped++;
         continue;
       }

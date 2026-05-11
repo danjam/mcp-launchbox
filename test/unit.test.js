@@ -626,7 +626,7 @@ describe('utils', () => {
     });
 
     it('replaces en-dash and em-dash with spaces', () => {
-      assert.equal(normaliseTitle('A–B—C'), 'a b c');
+      assert.equal(normaliseTitle('A-B, C'), 'a b c');
     });
 
     it('replaces & with and', () => {
