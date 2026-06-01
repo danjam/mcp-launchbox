@@ -11,6 +11,7 @@ import {
   normaliseTitle,
   ok,
   parseLimit,
+  passesSingleTokenTitleGuard,
   requireString,
 } from './utils.js';
 
@@ -51,7 +52,7 @@ export function createHandlers(
     const platform = asString(args.platform);
     if (typeof platform === 'object') return platform;
     const exact = args.exact === true;
-    // High threshold — check_library is for bundle duplicate checking, so
+    // High threshold, check_library is for bundle duplicate checking, so
     // false positives (claiming you own a game you don't) are worse than misses
     const CONFIDENCE_THRESHOLD = 0.85;
 
@@ -73,7 +74,8 @@ export function createHandlers(
       const titleIndex = platform
         ? (state.library.platformFuseTitleOnly.get(platform.toLowerCase()) ?? state.library.fuseTitleOnly)
         : state.library.fuseTitleOnly;
-      const fuzzyResults = titleIndex.search(exact ? query : normaliseTitle(query));
+      const normalisedQuery = exact ? query : normaliseTitle(query);
+      const fuzzyResults = titleIndex.search(normalisedQuery);
 
       const NEAR_MISS_FLOOR = 0.4;
       const matches: ReturnType<typeof compactResult>[] = [];
@@ -81,6 +83,15 @@ export function createHandlers(
 
       for (const r of fuzzyResults) {
         const confidence = fuseConfidence(r.score!);
+        // Issue #2: a single-token query (`"Gord"`) should not trigger an
+        // owned-confidence match against a mid-token substring of a longer
+        // title (`"Flash Gordon"`). With `ignoreLocation: true` Fuse scores
+        // the substring 0.99 even though the user clearly hasn't typed
+        // "Flash Gordon". Drop matches whose title has no whole-token
+        // (Levenshtein-tolerant) hit for the query token. Multi-token
+        // queries already get IDF differentiation and are unaffected.
+        const titleNorm = normaliseTitle(r.item.Title);
+        if (!passesSingleTokenTitleGuard(normalisedQuery, titleNorm)) continue;
         if (confidence >= CONFIDENCE_THRESHOLD) {
           matches.push(compactResult(r.item, confidence));
         } else if (confidence >= NEAR_MISS_FLOOR && nearMisses.length < 5) {
