@@ -68,7 +68,8 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 - `get_game_details` returns camelCase keys, `genres` as an array (split from semicolons), empty strings as `null`, `versions` array when alternate versions exist
 - `source` only reflects the import origin of the primary entry — `versions` shows all owned storefronts/variants
 - `search_games` and `check_library` accept an optional `exact` param to disable punctuation normalisation
-- `check_library` includes `nearMisses` (up to 5 candidates with confidence 0.40–0.84) when `matches` is empty; when both matches and nearMisses are empty, a prefix-token fallback checks for shorter title matches (e.g. library has "Behind the Frame", query is "Behind the Frame: The Finest Scenery") — surfaced as nearMisses with confidence 0 (leads, not ownership assertions)
+- `check_library` includes `nearMisses` (up to 5 candidates with confidence 0.40–0.84) when `matches` is empty; a nearMiss with confidence 0 means a shorter title exists — search the head title to confirm ownership
+- `check_library` results don't include storefront/version info — use `get_game_details` for that
 
 **Key dependencies:** `fast-xml-parser` for XML parsing, `fuse.js` for fuzzy search.
 

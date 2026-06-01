@@ -92,7 +92,9 @@ Tool: `search_games`
 
 ### Check Library
 
-Check which games from a list are already in the library. Uses exact title matching first, then fuzzy matching — only matches with confidence ≥0.85 are included to avoid false positives. When no match is found, `nearMisses` shows up to 5 close candidates for diagnostics. If both matches and nearMisses are empty, a prefix fallback checks whether a shorter version of the title exists (e.g. "Behind the Frame" for query "Behind the Frame: The Finest Scenery") — these appear as nearMisses with confidence 0, signalling a lead that needs human review rather than a confirmed match. Punctuation is normalised before matching by default.
+Check which games from a list are already in the library. Uses exact title matching first, then fuzzy matching — only matches with confidence ≥0.85 are included to avoid false positives. When no match is found, `nearMisses` shows up to 5 close candidates for diagnostics. A nearMiss with confidence 0 means a shorter version of the title exists in the library (e.g. "Behind the Frame" for query "Behind the Frame: The Finest Scenery") — search the head title (everything before the colon/subtitle) to confirm ownership. Punctuation is normalised before matching by default.
+
+Results do not include storefront or version info — use `get_game_details` for that.
 
 Designed for bundle duplicate checking — pass all the titles in one call instead of searching one at a time. Omit `platform` to check across all platforms (recommended for bundles).
 
