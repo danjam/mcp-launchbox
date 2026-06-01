@@ -20,7 +20,7 @@ export const tools = [
   {
     name: 'check_library',
     description:
-      'Check which games from a list are already in the library. Only matches with confidence ≥0.85 are included to avoid false positives. When matches is empty, nearMisses shows up to 3 close candidates for diagnostics. Designed for bundle duplicate checking — replaces calling search_games per title. Omit platform to check across all platforms (recommended for bundles).',
+      'Check which games from a list are already in the library. Only matches with confidence ≥0.85 are included to avoid false positives. When matches is empty, nearMisses shows up to 5 close candidates for diagnostics. If both matches and nearMisses are empty, a prefix fallback checks whether a shorter version of the title exists in the library (e.g. "Behind the Frame" for query "Behind the Frame: The Finest Scenery") — these appear as nearMisses with confidence 0 to signal they need human review. Designed for bundle duplicate checking — replaces calling search_games per title. Omit platform to check across all platforms (recommended for bundles).',
     inputSchema: {
       type: 'object',
       properties: {

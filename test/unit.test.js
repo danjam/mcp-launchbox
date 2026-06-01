@@ -101,6 +101,35 @@ function mockGames() {
       Completed: false,
       Progress: '',
     },
+    {
+      ID: 'ddd-444',
+      Title: 'Behind the Frame',
+      Platform: 'Windows',
+      Developer: 'Silver Lining Studio',
+      Publisher: 'Akupara Games',
+      Genre: 'Adventure',
+      ReleaseDate: '2021-08-25',
+      Notes: '',
+      Source: '',
+      Series: '',
+      PlayMode: '',
+      Rating: '',
+      MaxPlayers: '',
+      CommunityStarRating: 4.2,
+      StarRating: 0,
+      Status: '',
+      Favorite: false,
+      DatabaseID: 'db-4',
+      Hide: false,
+      Broken: false,
+      PlayCount: 0,
+      PlayTime: 0,
+      LastPlayedDate: '',
+      DateAdded: '2024-01-01',
+      Installed: false,
+      Completed: false,
+      Progress: '',
+    },
   ];
 }
 
@@ -304,7 +333,7 @@ describe('list_platforms', () => {
     if (result.ok) {
       const parsed = JSON.parse(result.text);
       assert.equal(parsed[0].platform, 'Windows');
-      assert.equal(parsed[0].count, 2);
+      assert.equal(parsed[0].count, 3);
       assert.equal(parsed[1].platform, 'Linux');
       assert.equal(parsed[1].count, 1);
     }
@@ -319,7 +348,7 @@ describe('get_stats', () => {
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.equal(parsed.totalGames, 3);
+      assert.equal(parsed.totalGames, 4);
       assert.equal(parsed.totalPlatforms, 2);
       assert.equal(parsed.topPlatforms.length, 2);
     }
@@ -425,6 +454,46 @@ describe('check_library', () => {
     const result = await handlers.check_library({ games: ['test'], platform: 42 });
     assert.equal(result.ok, false);
   });
+
+  it('surfaces prefix match as nearMiss when subtitled query misses', async () => {
+    const result = await handlers.check_library({ games: ['Behind the Frame: The Finest Scenery'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      const entry = parsed.results[0];
+      assert.equal(entry.matches.length, 0);
+      assert.ok(entry.nearMisses.length > 0, 'expected prefix fallback nearMiss');
+      assert.equal(entry.nearMisses[0].title, 'Behind the Frame');
+      assert.equal(entry.nearMisses[0].confidence, 0);
+      assert.equal(parsed.summary.owned, 0);
+      assert.equal(parsed.summary.new, 1);
+    }
+  });
+
+  it('does not run prefix fallback when fuzzy nearMisses exist', async () => {
+    const result = await handlers.check_library({ games: ['Half-Life 3'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      const entry = parsed.results[0];
+      assert.ok(entry.nearMisses.length > 0);
+      assert.ok(entry.nearMisses.every((n) => n.confidence > 0), 'should be Fuse nearMisses, not prefix');
+    }
+  });
+
+  it('respects platform filter on prefix fallback', async () => {
+    const result = await handlers.check_library({
+      games: ['Behind the Frame: The Finest Scenery'],
+      platform: 'Linux',
+    });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      const entry = parsed.results[0];
+      assert.equal(entry.matches.length, 0);
+      assert.deepEqual(entry.nearMisses, []);
+    }
+  });
 });
 
 describe('find_duplicates', () => {
@@ -466,7 +535,7 @@ describe('reload_library', () => {
     if (result.ok) {
       const parsed = JSON.parse(result.text);
       assert.equal(parsed.reloaded, true);
-      assert.equal(parsed.games, 3);
+      assert.equal(parsed.games, 4);
       assert.equal(parsed.platforms, 2);
     }
   });
@@ -678,7 +747,7 @@ describe('utils', () => {
       const games = mockGames();
       const result = sortedPlatformCounts(games);
       assert.equal(result[0].platform, 'Windows');
-      assert.equal(result[0].count, 2);
+      assert.equal(result[0].count, 3);
       assert.equal(result[1].platform, 'Linux');
       assert.equal(result[1].count, 1);
     });

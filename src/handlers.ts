@@ -100,6 +100,33 @@ export function createHandlers(
       }
 
       if (matches.length > 0) return { query, matches };
+
+      // Prefix fallback: when both matches and nearMisses are empty, the
+      // query may have a subtitle the library entry lacks (e.g. query
+      // "Behind the Frame: The Finest Scenery", library has "Behind the
+      // Frame"). Try progressively shorter token prefixes of the normalised
+      // query against the title map. Surfaced as nearMisses (confidence 0),
+      // not matches — prefix hits are leads, not ownership assertions.
+      // Confidence 0 is intentionally out-of-band (nearMisses from Fuse
+      // carry 0.4–0.85) so consumers can distinguish the source.
+      if (nearMisses.length === 0) {
+        const tokens = normalisedQuery.split(/\s+/).filter(Boolean);
+        // Start at tokens.length - 1: the full query already missed on the exact path
+        for (let i = tokens.length - 1; i >= 1; i--) {
+          const prefix = tokens.slice(0, i).join(' ');
+          let prefixCandidates = titleMap.get(prefix);
+          if (!prefixCandidates) continue;
+          if (platform) {
+            prefixCandidates = prefixCandidates.filter((g) => matchesPlatform(g.Platform, platform));
+          }
+          for (const g of prefixCandidates) {
+            if (nearMisses.length >= 5) break;
+            nearMisses.push({ title: g.Title, platform: g.Platform, confidence: 0 });
+          }
+          break;
+        }
+      }
+
       return { query, matches, nearMisses };
     });
 
