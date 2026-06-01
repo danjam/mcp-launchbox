@@ -11,11 +11,11 @@ const METHOD_NOT_FOUND = -32601;
 const INVALID_PARAMS = -32602;
 const INTERNAL_ERROR = -32603;
 
-const platformsPath = process.env.LAUNCHBOX_PLATFORMS_PATH;
-if (!platformsPath) {
+if (!process.env.LAUNCHBOX_PLATFORMS_PATH) {
   console.error('LAUNCHBOX_PLATFORMS_PATH environment variable is required');
   process.exit(1);
 }
+const platformsPath: string = process.env.LAUNCHBOX_PLATFORMS_PATH;
 
 process.stdout.on('error', () => process.exit(0));
 
@@ -42,7 +42,7 @@ function error(id: RequestId | null, code: number, message: string): void {
 console.error(`Loading games from ${platformsPath}...`);
 let library: Library;
 try {
-  library = await buildLibrary(platformsPath!);
+  library = await buildLibrary(platformsPath);
   console.error(`Loaded ${library.games.length} games across ${library.platformCounts.length} platforms`);
 } catch (e) {
   console.error(`Failed to load games: ${e}`);
@@ -55,7 +55,7 @@ let reloading: Promise<void> | null = null;
 
 async function reload(): Promise<void> {
   if (reloading) return reloading;
-  reloading = buildLibrary(platformsPath!).then((lib) => {
+  reloading = buildLibrary(platformsPath).then((lib) => {
     state.library = lib;
   });
   try {

@@ -37,7 +37,7 @@ export function createHandlers(
       : state.library.fuse;
     const results = index.search(exact ? query : normaliseTitle(query));
 
-    const items = results.slice(0, limit).map((r) => compactResult(r.item, fuseConfidence(r.score!)));
+    const items = results.slice(0, limit).map((r) => compactResult(r.item, fuseConfidence(r.score ?? 0)));
 
     return ok(JSON.stringify({ results: items }));
   }
@@ -82,7 +82,7 @@ export function createHandlers(
       const nearMisses: { title: string; platform: string; confidence: number }[] = [];
 
       for (const r of fuzzyResults) {
-        const confidence = fuseConfidence(r.score!);
+        const confidence = fuseConfidence(r.score ?? 0);
         // Issue #2: a single-token query (`"Gord"`) should not trigger an
         // owned-confidence match against a mid-token substring of a longer
         // title (`"Flash Gordon"`). With `ignoreLocation: true` Fuse scores
@@ -197,7 +197,7 @@ export function createHandlers(
     const matchedKeys = new Set(
       state.library.fuse
         .search(query)
-        .filter((r) => fuseConfidence(r.score!) >= 0.5)
+        .filter((r) => fuseConfidence(r.score ?? 0) >= 0.5)
         .map((r) => r.item.Title.toLowerCase()),
     );
 
