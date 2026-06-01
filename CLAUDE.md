@@ -39,8 +39,8 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 - `src/handlers.ts` — `matchesPlatform` helper, `createHandlers(state, reload)` factory returning `Record<ToolName, ToolHandler>`; all 7 tool handler functions (sync except `handleReloadLibrary`)
 - `src/utils.ts` — Pure helpers: result constructors (`ok`, `fail`), argument validation (`parseLimit`, `asString`, `requireString`), search helpers (`fuseConfidence(score: number)`, `normaliseTitle`, `compactResult`, `sortedPlatformCounts`), response formatting (`formatPlayTime`, `emptyToNull`)
 - `src/tools.ts` — Tool schema definitions with MCP annotations (`as const satisfies MCPToolDefinition[]`); derives `ToolName` union type for type-safe handler map
-- `src/loader.ts` — XML parsing with `htmlEntities`, game extraction, string interning (`loadGames`); Fuse.js index building (full + per-platform + title-only variants), `gamesByTitle` (lowercase) and `gamesByNormalisedTitle` maps for fast-path lookups, `normalisingGetFn` custom Fuse getter for punctuation-normalised matching, precomputed `platformCounts` and `duplicateGroups` (`buildLibrary`); exports `FUSE_OPTIONS` and `FUSE_TITLE_ONLY_OPTIONS`
-- `src/types.ts` — All type definitions: `Game`, `RequestId`, `ToolResult`, `ToolHandler`, `MCPToolAnnotations`, MCP interfaces
+- `src/loader.ts` — XML parsing with `htmlEntities`, game extraction, string interning (`loadGames`); `AdditionalApplication` parsing for game versions/storefronts (`extractVersion`); Fuse.js index building (full + per-platform + title-only variants), `gamesByTitle` (lowercase) and `gamesByNormalisedTitle` maps for fast-path lookups, `normalisingGetFn` custom Fuse getter for punctuation-normalised matching, precomputed `platformCounts` and `duplicateGroups` (`buildLibrary`); exports `FUSE_OPTIONS` and `FUSE_TITLE_ONLY_OPTIONS`
+- `src/types.ts` — All type definitions: `Game`, `GameVersion`, `RequestId`, `ToolResult`, `ToolHandler`, `MCPToolAnnotations`, MCP interfaces
 
 **Request flow:** stdin line → JSON parse → structural validation (object check) → `handleRequest` dispatches by MCP method (`initialize`, `tools/list`, `tools/call`) → `handleToolCall` looks up handler via `Object.hasOwn` → handler returns `ToolResult` → dispatch maps result to JSON-RPC response on stdout. Parse errors and invalid structures return proper JSON-RPC error codes via named constants.
 
@@ -51,6 +51,7 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 - Non-numeric field values are counted and logged as an aggregate warning (not per-game)
 - File I/O errors and XML parse errors are reported separately with distinct messages; ENOENT and ENOTDIR get helpful error messages
 - XML files with non-`<LaunchBox>` root elements are warned and skipped
+- `<AdditionalApplication>` elements are parsed alongside `<Game>` elements — these represent alternate versions (storefronts like Steam/GOG/Epic for Windows games, ROM regions for console games, platform ports for ScummVM). Grouped by `GameID` into `versionsByGameId` map on the Library; each version has `version` (string), `installed` (boolean), and optional `region` (string)
 - In-memory index: `Map<id, Game>` for O(1) lookup, `gamesByTitle` (lowercase key) and `gamesByNormalisedTitle` (punctuation-normalised key) for fast exact matching, Fuse.js indexes for fuzzy search (full library + per-platform, keyed by lowercase platform name)
 - Title-only Fuse indexes (`fuseTitleOnly`, `platformFuseTitleOnly`) used by `check_library` for fuzzy fallback — separate from the main indexes that also search Series
 - Per-platform Fuse indexes avoid full-library scans when a platform filter is provided; Game objects are shared by reference across all indexes
@@ -64,7 +65,8 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 
 **Response conventions:**
 - `playTime` is always `{seconds, hours}` (hours rounded to 1 decimal)
-- `get_game_details` returns camelCase keys, `genres` as an array (split from semicolons), empty strings as `null`
+- `get_game_details` returns camelCase keys, `genres` as an array (split from semicolons), empty strings as `null`, `versions` array when alternate versions exist
+- `source` only reflects the import origin of the primary entry — `versions` shows all owned storefronts/variants
 - `search_games` and `check_library` accept an optional `exact` param to disable punctuation normalisation
 - `check_library` includes `nearMisses` (up to 5 candidates with confidence 0.40–0.84) when `matches` is empty
 

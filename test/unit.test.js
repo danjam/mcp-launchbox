@@ -156,8 +156,8 @@ function mockLibrary() {
     .map((g) => ({ title: g.title, platforms: [...g.platforms].sort(), entries: g.entries }))
     .sort((a, b) => b.entries - a.entries);
   return {
-    gamesById, gamesByTitle, gamesByNormalisedTitle, games, fuse, fuseTitleOnly,
-    platformFuse, platformFuseTitleOnly, platformCounts, duplicateGroups,
+    gamesById, gamesByTitle, gamesByNormalisedTitle, games, versionsByGameId: new Map(),
+    fuse, fuseTitleOnly, platformFuse, platformFuseTitleOnly, platformCounts, duplicateGroups,
   };
 }
 

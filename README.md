@@ -109,6 +109,8 @@ Tool: `check_library`
 
 Get full details for a specific game by its ID. Returns all metadata in camelCase: title, platform, developer, genres (array), series, ratings (communityStarRating and starRating, both 0–5), playTime ({seconds, hours}), installed status, and more. String fields are `null` when empty/missing.
 
+When a game has alternate versions (e.g. multiple storefronts like Steam/GOG/Epic, ROM regions, or platform ports), a `versions` array is included. Each entry has `version` (storefront name or region identifier), `installed` (boolean), and optionally `region` (normalised geographic label for ROM variants). Note: `source` only reflects the import origin of the primary entry, not all owned storefronts — check `versions` for the full picture.
+
 Tool: `get_game_details`
 
 | Parameter | Type | Required | Description |

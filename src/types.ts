@@ -1,3 +1,9 @@
+export interface GameVersion {
+  readonly version: string;
+  readonly region?: string;
+  readonly installed: boolean;
+}
+
 export interface Game {
   readonly ID: string;
   readonly Title: string;

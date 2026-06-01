@@ -2,7 +2,15 @@ import type { Library } from './loader.js';
 import type { ToolName } from './tools.js';
 import type { ToolHandler, ToolResult } from './types.js';
 import {
-  parseLimit, asString, compactResult, emptyToNull, fail, formatPlayTime, fuseConfidence, normaliseTitle, ok,
+  asString,
+  compactResult,
+  emptyToNull,
+  fail,
+  formatPlayTime,
+  fuseConfidence,
+  normaliseTitle,
+  ok,
+  parseLimit,
   requireString,
 } from './utils.js';
 
@@ -24,7 +32,7 @@ export function createHandlers(
     const exact = args.exact === true;
 
     const index = platform
-      ? state.library.platformFuse.get(platform.toLowerCase()) ?? state.library.fuse
+      ? (state.library.platformFuse.get(platform.toLowerCase()) ?? state.library.fuse)
       : state.library.fuse;
     const results = index.search(exact ? query : normaliseTitle(query));
 
@@ -63,7 +71,7 @@ export function createHandlers(
 
       // Slow path: fuzzy search (title only)
       const titleIndex = platform
-        ? state.library.platformFuseTitleOnly.get(platform.toLowerCase()) ?? state.library.fuseTitleOnly
+        ? (state.library.platformFuseTitleOnly.get(platform.toLowerCase()) ?? state.library.fuseTitleOnly)
         : state.library.fuseTitleOnly;
       const fuzzyResults = titleIndex.search(exact ? query : normaliseTitle(query));
 
@@ -129,6 +137,8 @@ export function createHandlers(
       progress: emptyToNull(game.Progress),
     };
     if (args.include_notes === true) detail.notes = emptyToNull(game.Notes);
+    const versions = state.library.versionsByGameId.get(game.ID);
+    if (versions && versions.length > 0) detail.versions = versions;
     return ok(JSON.stringify(detail));
   }
 

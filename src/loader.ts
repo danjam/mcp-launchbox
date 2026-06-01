@@ -2,7 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import Fuse, { type IFuseOptions } from 'fuse.js';
-import type { Game } from './types.js';
+import type { Game, GameVersion } from './types.js';
 import { normaliseTitle, sortedPlatformCounts } from './utils.js';
 
 const stringCache = new Map<string, string>();
@@ -69,9 +69,20 @@ function extractGame(raw: Record<string, unknown>): Game {
   };
 }
 
+function extractVersion(raw: Record<string, unknown>): { gameId: string; version: GameVersion } | undefined {
+  const gameId = toStr(raw.GameID);
+  const version = toStr(raw.Version);
+  if (!gameId || !version) return undefined;
+  const region = toStr(raw.Region);
+  const entry: GameVersion = { version, installed: toBool(raw.Installed) };
+  if (region) (entry as { region: string }).region = region;
+  return { gameId, version: entry };
+}
+
 export async function loadGames(platformsPath: string): Promise<{
   gamesById: Map<string, Game>;
   games: Game[];
+  versionsByGameId: Map<string, GameVersion[]>;
 }> {
   stringCache.clear();
   nanCount = 0;
@@ -99,7 +110,8 @@ export async function loadGames(platformsPath: string): Promise<{
     ignoreAttributes: true,
     htmlEntities: true,
     // Ensures Game is always an array even for single-game platform files
-    isArray: (_tagName: string, jPath: string) => jPath === 'LaunchBox.Game',
+    isArray: (_tagName: string, jPath: string) =>
+      jPath === 'LaunchBox.Game' || jPath === 'LaunchBox.AdditionalApplication',
   });
 
   const fileResults = await Promise.all(
@@ -115,10 +127,11 @@ export async function loadGames(platformsPath: string): Promise<{
       try {
         const parsed = parser.parse(xml);
         const games = (parsed?.LaunchBox?.Game ?? []) as Record<string, unknown>[];
+        const additionalApps = (parsed?.LaunchBox?.AdditionalApplication ?? []) as Record<string, unknown>[];
         if (games.length === 0 && parsed && !parsed.LaunchBox) {
           console.warn(`"${file}" has no <LaunchBox> root element — skipping`);
         }
-        return games;
+        return { games, additionalApps };
       } catch (e) {
         throw new Error(`Failed to parse XML in "${file}": ${e instanceof Error ? e.message : e}`);
       }
@@ -127,9 +140,20 @@ export async function loadGames(platformsPath: string): Promise<{
 
   const gamesById = new Map<string, Game>();
   const games: Game[] = [];
+  const versionsByGameId = new Map<string, GameVersion[]>();
   let skipped = 0;
 
-  for (const rawGames of fileResults) {
+  for (const { games: rawGames, additionalApps } of fileResults) {
+    for (const raw of additionalApps) {
+      const entry = extractVersion(raw);
+      if (!entry) continue;
+      let list = versionsByGameId.get(entry.gameId);
+      if (!list) {
+        list = [];
+        versionsByGameId.set(entry.gameId, list);
+      }
+      list.push(entry.version);
+    }
     for (const raw of rawGames) {
       const game = extractGame(raw);
       if (!game.ID) {
@@ -165,7 +189,7 @@ export async function loadGames(platformsPath: string): Promise<{
   }
 
   stringCache.clear();
-  return { gamesById, games };
+  return { gamesById, games, versionsByGameId };
 }
 
 const defaultGetFn = Fuse.config.getFn;
@@ -197,7 +221,7 @@ export const FUSE_TITLE_ONLY_OPTIONS: IFuseOptions<Game> = {
 };
 
 export async function buildLibrary(platformsPath: string): Promise<Library> {
-  const { gamesById, games } = await loadGames(platformsPath);
+  const { gamesById, games, versionsByGameId } = await loadGames(platformsPath);
   const fuse = new Fuse(games, FUSE_OPTIONS);
   const fuseTitleOnly = new Fuse(games, FUSE_TITLE_ONLY_OPTIONS);
 
@@ -243,8 +267,17 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
   const duplicateGroups = buildDuplicateGroups(games);
 
   return {
-    gamesById, gamesByTitle, gamesByNormalisedTitle, games, fuse, fuseTitleOnly,
-    platformFuse, platformFuseTitleOnly, platformCounts, duplicateGroups,
+    gamesById,
+    gamesByTitle,
+    gamesByNormalisedTitle,
+    games,
+    versionsByGameId,
+    fuse,
+    fuseTitleOnly,
+    platformFuse,
+    platformFuseTitleOnly,
+    platformCounts,
+    duplicateGroups,
   };
 }
 
@@ -273,6 +306,7 @@ export interface Library {
   readonly gamesByTitle: ReadonlyMap<string, readonly Game[]>;
   readonly gamesByNormalisedTitle: ReadonlyMap<string, readonly Game[]>;
   readonly games: readonly Game[];
+  readonly versionsByGameId: ReadonlyMap<string, readonly GameVersion[]>;
   readonly fuse: Fuse<Game>;
   readonly fuseTitleOnly: Fuse<Game>;
   readonly platformFuse: ReadonlyMap<string, Fuse<Game>>;

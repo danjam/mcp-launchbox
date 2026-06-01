@@ -41,7 +41,7 @@ export const tools = [
   {
     name: 'get_game_details',
     description:
-      'Get full details for a specific game by ID. Rating scales: communityStarRating and starRating are both 0–5. progress is a free-form string from LaunchBox (e.g. "Not Started / Unplayed", "Completed").',
+      'Get full details for a specific game by ID. Rating scales: communityStarRating and starRating are both 0–5. progress is a free-form string from LaunchBox (e.g. "Not Started / Unplayed", "Completed"). versions lists alternate versions when present (e.g. storefronts like Steam/GOG/Epic, ROM regions, or platform ports) — source only reflects the import origin of the primary entry, not all owned storefronts.',
     inputSchema: {
       type: 'object',
       properties: {
