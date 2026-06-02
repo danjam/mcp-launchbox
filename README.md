@@ -122,7 +122,7 @@ Tool: `get_game_details`
 
 ### List Games
 
-List and filter games in the library. Unlike `search_games`, this does not do fuzzy matching — it returns games matching the specified filters, sorted and paginated. Use for browsing by platform, installed status, or favorites, and for recency queries like "what did I add this week." Returns `total` (filtered count) and `results` (compact game objects without confidence scores).
+List and filter games in the library. Unlike `search_games`, this does not do fuzzy matching — it returns games matching the specified filters, sorted and paginated. Use for browsing by platform, installed status, or favorites, and for recency queries like "what did I add this week." Returns `total` (filtered count) and `results` (compact game objects without confidence scores, but with `dateAdded` and `lastPlayed` timestamps).
 
 Tool: `list_games`
 

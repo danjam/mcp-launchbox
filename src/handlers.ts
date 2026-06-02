@@ -227,7 +227,11 @@ export function createHandlers(
     });
 
     const page = sorted.slice(offset, offset + limit);
-    const items = page.map((g) => compactResult(g));
+    const items = page.map((g) => ({
+      ...compactResult(g),
+      dateAdded: emptyToNull(g.DateAdded),
+      lastPlayed: emptyToNull(g.LastPlayedDate),
+    }));
 
     return ok(JSON.stringify({ total: filtered.length, results: items }));
   }

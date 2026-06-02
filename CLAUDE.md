@@ -70,7 +70,7 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 - `search_games` and `check_library` accept an optional `exact` param to disable punctuation normalisation
 - `check_library` includes `nearMisses` (up to 5 candidates with confidence 0.40–0.84) when `matches` is empty; a nearMiss with confidence 0 means a shorter title exists — search the head title to confirm ownership
 - `check_library` results don't include storefront/version info — use `get_game_details` for that
-- `list_games` returns `{ total, results }` where results are compact game objects without confidence; supports filters (`platform`, `installed`, `favorite`), sort (`title`, `dateAdded`, `lastPlayed`, `playTime`), and pagination (`limit`, `offset`)
+- `list_games` returns `{ total, results }` where results are compact game objects without confidence but with `dateAdded` and `lastPlayed` fields; supports filters (`platform`, `installed`, `favorite`), sort (`title`, `dateAdded`, `lastPlayed`, `playTime`), and pagination (`limit`, `offset`)
 - `get_stats` includes `statusCounts` — all distinct progress values with counts, sorted descending
 - `reload_library` returns `added`/`removed` arrays (id, title, platform) showing what changed since the previous load; omitted on first load
 
