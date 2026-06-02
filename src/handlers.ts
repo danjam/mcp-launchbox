@@ -52,6 +52,7 @@ export function createHandlers(
     const titles = args.games;
     if (!Array.isArray(titles) || titles.length === 0 || !titles.every((t) => typeof t === 'string'))
       return fail('games is required (array of strings)');
+    if (titles.some((t) => t.trim() === '')) return fail('games must not contain empty strings');
     const maxTitles = parseLimit(args.limit, 100);
     if (typeof maxTitles !== 'number') return maxTitles;
     if (titles.length > maxTitles) return fail(`Too many titles (${titles.length}), max is ${maxTitles}`);
@@ -116,11 +117,10 @@ export function createHandlers(
       // Confidence 0 is intentionally out-of-band (nearMisses from Fuse
       // carry 0.4–0.85) so consumers can distinguish the source.
       if (nearMisses.length === 0) {
-        const tokens = normalisedQuery.split(/\s+/).filter(Boolean);
-        // Start at tokens.length - 1: the full query already missed on the exact path
-        for (let i = tokens.length - 1; i >= 1; i--) {
-          const prefix = tokens.slice(0, i).join(' ');
-          let prefixCandidates = titleMap.get(prefix);
+        const normTokens = normaliseTitle(query).split(/\s+/).filter(Boolean);
+        for (let i = normTokens.length - 1; i >= 1; i--) {
+          const prefix = normTokens.slice(0, i).join(' ');
+          let prefixCandidates = state.library.gamesByNormalisedTitle.get(prefix);
           if (!prefixCandidates) continue;
           if (platform) {
             prefixCandidates = prefixCandidates.filter((g) => matchesPlatform(g.Platform, platform));
@@ -250,15 +250,18 @@ export function createHandlers(
       return ok(JSON.stringify(state.library.duplicateGroups.slice(0, limit)));
     }
 
-    const matchedKeys = new Set(
-      state.library.fuse
-        .search(query)
-        .filter((r) => fuseConfidence(r.score ?? 0) >= 0.5)
-        .map((r) => r.item.Title.toLowerCase()),
-    );
+    const matchRank = new Map<string, number>();
+    const fuseResults = state.library.fuse.search(query).filter((r) => fuseConfidence(r.score ?? 0) >= 0.5);
+    for (let i = 0; i < fuseResults.length; i++) {
+      const r = fuseResults[i];
+      if (!r) continue;
+      const key = r.item.Title.toLowerCase();
+      if (!matchRank.has(key)) matchRank.set(key, i);
+    }
 
     const duplicates = state.library.duplicateGroups
-      .filter((g) => matchedKeys.has(g.title.toLowerCase()))
+      .filter((g) => matchRank.has(g.title.toLowerCase()))
+      .sort((a, b) => (matchRank.get(a.title.toLowerCase()) ?? 0) - (matchRank.get(b.title.toLowerCase()) ?? 0))
       .slice(0, limit);
 
     return ok(JSON.stringify(duplicates));

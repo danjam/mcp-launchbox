@@ -61,7 +61,7 @@ function extractGame(raw: Record<string, unknown>): Game {
     Broken: toBool(raw.Broken),
     PlayCount: toNum(raw.PlayCount),
     PlayTime: toNum(raw.PlayTime),
-    LastPlayedDate: toStr(raw.LastPlayedDate),
+    LastPlayedDate: toStr(raw.LastPlayedDate).startsWith('1970-') ? '' : toStr(raw.LastPlayedDate),
     DateAdded: toStr(raw.DateAdded),
     Installed: toBool(raw.Installed),
     Completed: toBool(raw.Completed),

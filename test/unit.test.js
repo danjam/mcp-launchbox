@@ -524,6 +524,33 @@ describe('check_library', () => {
     assert.equal(result.ok, false);
   });
 
+  it('rejects empty-string titles', async () => {
+    const result = await handlers.check_library({ games: [''] });
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.match(result.message, /empty/i);
+  });
+
+  it('rejects whitespace-only titles', async () => {
+    const result = await handlers.check_library({ games: ['  '] });
+    assert.equal(result.ok, false);
+  });
+
+  it('surfaces prefix nearMiss with exact:true', async () => {
+    const result = await handlers.check_library({
+      games: ['Behind the Frame: The Finest Scenery'],
+      exact: true,
+    });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      const entry = parsed.results[0];
+      assert.equal(entry.matches.length, 0);
+      assert.ok(entry.nearMisses.length > 0, 'exact mode should still surface prefix nearMiss');
+      assert.equal(entry.nearMisses[0].title, 'Behind the Frame');
+      assert.equal(entry.nearMisses[0].confidence, 0);
+    }
+  });
+
   it('rejects mixed-type games array', async () => {
     const result = await handlers.check_library({ games: ['valid', 123] });
     assert.equal(result.ok, false);
