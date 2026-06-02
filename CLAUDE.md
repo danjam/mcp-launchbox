@@ -48,6 +48,7 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 - `LAUNCHBOX_PLATFORMS_PATH` points directly at the directory containing platform XML files (one file per platform)
 - All XML is parsed and loaded into memory at startup (async parallel I/O)
 - Games with no ID, no title, no platform, or duplicate IDs are skipped with per-game and aggregate warnings to stderr
+- `LastPlayedDate` values starting with `1970-` are normalised to empty (LaunchBox uses `1970-01-02` as a sentinel for "never played")
 - Non-numeric field values are counted and logged as an aggregate warning (not per-game)
 - File I/O errors and XML parse errors are reported separately with distinct messages; ENOENT and ENOTDIR get helpful error messages
 - XML files with non-`<LaunchBox>` root elements are warned and skipped
