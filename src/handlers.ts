@@ -257,10 +257,20 @@ export function createHandlers(
   function handleGetStats(): ToolResult {
     const platforms = state.library.platformCounts;
 
+    const statusMap = new Map<string, number>();
+    for (const g of state.library.games) {
+      const status = g.Progress || 'No Status';
+      statusMap.set(status, (statusMap.get(status) ?? 0) + 1);
+    }
+    const statusCounts = [...statusMap.entries()]
+      .map(([status, count]) => ({ status, count }))
+      .sort((a, b) => b.count - a.count);
+
     const stats = {
       totalGames: state.library.games.length,
       totalPlatforms: platforms.length,
       topPlatforms: platforms.slice(0, 10),
+      statusCounts,
     };
 
     return ok(JSON.stringify(stats));

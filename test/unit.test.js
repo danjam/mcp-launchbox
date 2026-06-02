@@ -425,6 +425,11 @@ describe('get_stats', () => {
       assert.equal(parsed.totalGames, 4);
       assert.equal(parsed.totalPlatforms, 2);
       assert.equal(parsed.topPlatforms.length, 2);
+      assert.ok(Array.isArray(parsed.statusCounts));
+      assert.ok(parsed.statusCounts.length > 0);
+      assert.ok(parsed.statusCounts[0].status);
+      assert.ok(parsed.statusCounts[0].count > 0);
+      assert.ok(parsed.statusCounts[0].count >= parsed.statusCounts[parsed.statusCounts.length - 1].count);
     }
   });
 });

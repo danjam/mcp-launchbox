@@ -154,7 +154,7 @@ Tool: `find_duplicates`
 
 ### Get Stats
 
-Get library summary statistics (total games, total platforms, top 10 platforms by game count). No parameters needed.
+Get library summary statistics (total games, total platforms, top 10 platforms by game count, and status counts). `statusCounts` lists all distinct progress values with their counts, sorted descending — use it to discover what free-form status values exist in the library. No parameters needed.
 
 Tool: `get_stats`
 

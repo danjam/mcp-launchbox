@@ -99,7 +99,8 @@ export const tools = [
   },
   {
     name: 'get_stats',
-    description: 'Get library summary statistics: total games, total platforms, and top 10 platforms by game count.',
+    description:
+      'Get library summary statistics: total games, total platforms, top 10 platforms by game count, and statusCounts (all distinct progress values with counts, sorted descending). Use statusCounts to discover what free-form status values exist in the library.',
     inputSchema: {
       type: 'object',
       properties: {},
