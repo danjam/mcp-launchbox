@@ -324,6 +324,80 @@ describe('get_game_details', () => {
   });
 });
 
+describe('list_games', () => {
+  const { handlers } = setup();
+
+  it('returns all games sorted by title by default', async () => {
+    const result = await handlers.list_games({});
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.total, 4);
+      assert.equal(parsed.results[0].title, 'Behind the Frame');
+      assert.ok(!('confidence' in parsed.results[0]));
+    }
+  });
+
+  it('filters by platform', async () => {
+    const result = await handlers.list_games({ platform: 'Linux' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.total, 1);
+      assert.equal(parsed.results[0].platform, 'Linux');
+    }
+  });
+
+  it('filters by installed', async () => {
+    const result = await handlers.list_games({ installed: true });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.ok(parsed.results.every((r) => r.installed === true));
+    }
+  });
+
+  it('filters by favorite', async () => {
+    const result = await handlers.list_games({ favorite: true });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.ok(parsed.total > 0);
+      assert.ok(parsed.results.length > 0);
+    }
+  });
+
+  it('sorts by playTime descending', async () => {
+    const result = await handlers.list_games({ sort: 'playTime' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.results[0].title, 'Half-Life 2');
+    }
+  });
+
+  it('respects limit and offset', async () => {
+    const result = await handlers.list_games({ limit: 1, offset: 1 });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.total, 4);
+      assert.equal(parsed.results.length, 1);
+      assert.equal(parsed.results[0].title, 'Half-Life 2');
+    }
+  });
+
+  it('rejects invalid sort', async () => {
+    const result = await handlers.list_games({ sort: 'bogus' });
+    assert.equal(result.ok, false);
+  });
+
+  it('rejects invalid offset', async () => {
+    const result = await handlers.list_games({ offset: -1 });
+    assert.equal(result.ok, false);
+  });
+});
+
 describe('list_platforms', () => {
   const { handlers } = setup();
 

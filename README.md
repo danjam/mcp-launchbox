@@ -120,6 +120,21 @@ Tool: `get_game_details`
 | `id` | string | Yes | The game ID (UUID from search results) |
 | `include_notes` | boolean | No | Include the Notes field (default false) |
 
+### List Games
+
+List and filter games in the library. Unlike `search_games`, this does not do fuzzy matching — it returns games matching the specified filters, sorted and paginated. Use for browsing by platform, installed status, or favorites, and for recency queries like "what did I add this week." Returns `total` (filtered count) and `results` (compact game objects without confidence scores).
+
+Tool: `list_games`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `platform` | string | No | Filter by platform name |
+| `installed` | boolean | No | Filter by installed status |
+| `favorite` | boolean | No | Filter by favorite status |
+| `sort` | string | No | Sort order: `title` (default), `dateAdded`, `lastPlayed`, `playTime` |
+| `limit` | number | No | Max results to return (default 25) |
+| `offset` | number | No | Number of results to skip for pagination (default 0) |
+
 ### List Platforms
 
 List all platforms in the library with their game counts. No parameters needed.

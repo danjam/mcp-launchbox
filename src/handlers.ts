@@ -1,6 +1,6 @@
 import type { Library } from './loader.js';
 import type { ToolName } from './tools.js';
-import type { ToolHandler, ToolResult } from './types.js';
+import type { Game, ToolHandler, ToolResult } from './types.js';
 import {
   asString,
   compactResult,
@@ -180,6 +180,52 @@ export function createHandlers(
     return ok(JSON.stringify(detail));
   }
 
+  function handleListGames(args: Record<string, unknown>): ToolResult {
+    const platform = asString(args.platform);
+    if (typeof platform === 'object') return platform;
+    const limit = parseLimit(args.limit, 25);
+    if (typeof limit !== 'number') return limit;
+    const offsetVal = args.offset;
+    const offset =
+      offsetVal === undefined || offsetVal === null
+        ? 0
+        : Number.isInteger(Number(offsetVal)) && Number(offsetVal) >= 0
+          ? Number(offsetVal)
+          : undefined;
+    if (offset === undefined) return fail(`offset must be a non-negative integer, got: ${offsetVal}`);
+    const sort = asString(args.sort);
+    if (typeof sort === 'object') return sort;
+    const validSorts = ['title', 'dateAdded', 'lastPlayed', 'playTime'] as const;
+    if (sort && !validSorts.includes(sort as (typeof validSorts)[number]))
+      return fail(`sort must be one of: ${validSorts.join(', ')}`);
+    const sortKey = (sort ?? 'title') as (typeof validSorts)[number];
+
+    let filtered: readonly Game[] = state.library.games;
+    if (platform) filtered = filtered.filter((g) => matchesPlatform(g.Platform, platform));
+    if (args.installed === true) filtered = filtered.filter((g) => g.Installed);
+    if (args.installed === false) filtered = filtered.filter((g) => !g.Installed);
+    if (args.favorite === true) filtered = filtered.filter((g) => g.Favorite);
+    if (args.favorite === false) filtered = filtered.filter((g) => !g.Favorite);
+
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortKey) {
+        case 'dateAdded':
+          return (b.DateAdded || '').localeCompare(a.DateAdded || '');
+        case 'lastPlayed':
+          return (b.LastPlayedDate || '').localeCompare(a.LastPlayedDate || '');
+        case 'playTime':
+          return b.PlayTime - a.PlayTime;
+        default:
+          return a.Title.toLowerCase().localeCompare(b.Title.toLowerCase());
+      }
+    });
+
+    const page = sorted.slice(offset, offset + limit);
+    const items = page.map((g) => compactResult(g));
+
+    return ok(JSON.stringify({ total: filtered.length, results: items }));
+  }
+
   function handleListPlatforms(): ToolResult {
     return ok(JSON.stringify(state.library.platformCounts));
   }
@@ -239,6 +285,7 @@ export function createHandlers(
     search_games: handleSearchGames,
     check_library: handleCheckLibrary,
     get_game_details: handleGetGameDetails,
+    list_games: handleListGames,
     list_platforms: handleListPlatforms,
     find_duplicates: handleFindDuplicates,
     get_stats: handleGetStats,

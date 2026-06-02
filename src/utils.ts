@@ -102,23 +102,31 @@ export function formatPlayTime(seconds: number): { seconds: number; hours: numbe
 
 export function compactResult(
   game: Game,
-  confidence: number,
+  confidence?: number,
 ): {
   id: string;
   title: string;
   platform: string;
   installed: boolean;
   playTime: { seconds: number; hours: number };
-  confidence: number;
+  confidence?: number;
 } {
-  return {
+  const result: {
+    id: string;
+    title: string;
+    platform: string;
+    installed: boolean;
+    playTime: { seconds: number; hours: number };
+    confidence?: number;
+  } = {
     id: game.ID,
     title: game.Title,
     platform: game.Platform,
     installed: game.Installed,
     playTime: formatPlayTime(game.PlayTime),
-    confidence,
   };
+  if (confidence !== undefined) result.confidence = confidence;
+  return result;
 }
 
 export function sortedPlatformCounts(games: readonly Game[]): { platform: string; count: number }[] {

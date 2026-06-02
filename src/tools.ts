@@ -63,6 +63,28 @@ export const tools = [
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
+    name: 'list_games',
+    description:
+      'List and filter games in the library. Unlike search_games, this does not do fuzzy matching — it returns games matching the specified filters, sorted and paginated. Use for browsing by platform, installed status, or favorites, and for recency queries like "what did I add this week."',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        platform: { type: 'string', description: "Filter by platform name (e.g. 'Windows', 'Arcade')" },
+        installed: { type: 'boolean', description: 'Filter by installed status' },
+        favorite: { type: 'boolean', description: 'Filter by favorite status' },
+        sort: {
+          type: 'string',
+          enum: ['title', 'dateAdded', 'lastPlayed', 'playTime'],
+          description:
+            'Sort order (default "title"). dateAdded/lastPlayed sort most recent first, playTime sorts most played first',
+        },
+        limit: { type: 'integer', description: 'Max results to return (default 25)' },
+        offset: { type: 'integer', description: 'Number of results to skip for pagination (default 0)' },
+      },
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  {
     name: 'find_duplicates',
     description:
       'Find duplicate game entries grouped by title — includes cross-platform and same-platform duplicates. Optional query filters by fuzzy title match.',
