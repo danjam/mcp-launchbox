@@ -524,15 +524,20 @@ describe('check_library', () => {
     assert.equal(result.ok, false);
   });
 
-  it('rejects empty-string titles', async () => {
-    const result = await handlers.check_library({ games: [''] });
-    assert.equal(result.ok, false);
-    if (!result.ok) assert.match(result.message, /empty/i);
+  it('skips empty-string titles and processes valid ones', async () => {
+    const result = await handlers.check_library({ games: ['Half-Life 2', ''] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.summary.total, 1);
+      assert.equal(parsed.summary.owned, 1);
+    }
   });
 
-  it('rejects whitespace-only titles', async () => {
-    const result = await handlers.check_library({ games: ['  '] });
+  it('rejects all-empty games array', async () => {
+    const result = await handlers.check_library({ games: ['', '  '] });
     assert.equal(result.ok, false);
+    if (!result.ok) assert.match(result.message, /non-empty/i);
   });
 
   it('surfaces prefix nearMiss with exact:true', async () => {

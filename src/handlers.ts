@@ -52,10 +52,11 @@ export function createHandlers(
     const titles = args.games;
     if (!Array.isArray(titles) || titles.length === 0 || !titles.every((t) => typeof t === 'string'))
       return fail('games is required (array of strings)');
-    if (titles.some((t) => t.trim() === '')) return fail('games must not contain empty strings');
+    const validTitles: string[] = titles.filter((t) => t.trim() !== '');
+    if (validTitles.length === 0) return fail('games must contain at least one non-empty string');
     const maxTitles = parseLimit(args.limit, 100);
     if (typeof maxTitles !== 'number') return maxTitles;
-    if (titles.length > maxTitles) return fail(`Too many titles (${titles.length}), max is ${maxTitles}`);
+    if (validTitles.length > maxTitles) return fail(`Too many titles (${validTitles.length}), max is ${maxTitles}`);
     const platform = asString(args.platform);
     if (typeof platform === 'object') return platform;
     const exact = args.exact === true;
@@ -63,7 +64,7 @@ export function createHandlers(
     // false positives (claiming you own a game you don't) are worse than misses
     const CONFIDENCE_THRESHOLD = 0.85;
 
-    const results = titles.map((query) => {
+    const results = validTitles.map((query) => {
       const titleMap = exact ? state.library.gamesByTitle : state.library.gamesByNormalisedTitle;
       let candidates = titleMap.get(exact ? query.toLowerCase() : normaliseTitle(query));
 
@@ -141,7 +142,7 @@ export function createHandlers(
     return ok(
       JSON.stringify({
         results,
-        summary: { total: titles.length, owned, new: titles.length - owned },
+        summary: { total: validTitles.length, owned, new: validTitles.length - owned },
       }),
     );
   }
