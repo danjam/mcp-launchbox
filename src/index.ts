@@ -49,13 +49,29 @@ try {
   process.exit(1);
 }
 
-const state = { library };
+const state: {
+  library: Library;
+  lastReloadDiff: {
+    added: { id: string; title: string; platform: string }[];
+    removed: { id: string; title: string; platform: string }[];
+  } | null;
+} = { library, lastReloadDiff: null };
 
 let reloading: Promise<void> | null = null;
 
 async function reload(): Promise<void> {
   if (reloading) return reloading;
+  const oldGamesById = state.library.gamesById;
   reloading = buildLibrary(platformsPath).then((lib) => {
+    const added: { id: string; title: string; platform: string }[] = [];
+    const removed: { id: string; title: string; platform: string }[] = [];
+    for (const [id, game] of lib.gamesById) {
+      if (!oldGamesById.has(id)) added.push({ id, title: game.Title, platform: game.Platform });
+    }
+    for (const [id, game] of oldGamesById) {
+      if (!lib.gamesById.has(id)) removed.push({ id, title: game.Title, platform: game.Platform });
+    }
+    state.lastReloadDiff = { added, removed };
     state.library = lib;
   });
   try {

@@ -160,7 +160,7 @@ Tool: `get_stats`
 
 ### Reload Library
 
-Reload all game data from disk. Use after adding or removing games in LaunchBox. No parameters needed.
+Reload all game data from disk. Use after adding or removing games in LaunchBox. Returns game/platform counts plus `added` and `removed` arrays showing what changed since the previous load (id, title, platform for each). On first load, the diff is omitted. No parameters needed.
 
 Tool: `reload_library`
 

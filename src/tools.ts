@@ -109,7 +109,8 @@ export const tools = [
   },
   {
     name: 'reload_library',
-    description: 'Reload the game library from disk. Use after adding or removing games in LaunchBox.',
+    description:
+      'Reload the game library from disk. Use after adding or removing games in LaunchBox. Returns game/platform counts plus added/removed arrays showing what changed since the previous load (id, title, platform for each).',
     inputSchema: {
       type: 'object',
       properties: {},

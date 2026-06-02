@@ -20,7 +20,13 @@ function matchesPlatform(gamePlatform: string, filter: string): boolean {
 }
 
 export function createHandlers(
-  state: { library: Library },
+  state: {
+    library: Library;
+    lastReloadDiff?: {
+      added: { id: string; title: string; platform: string }[];
+      removed: { id: string; title: string; platform: string }[];
+    } | null;
+  },
   reload: () => Promise<void>,
 ): Record<ToolName, ToolHandler> {
   function handleSearchGames(args: Record<string, unknown>): ToolResult {
@@ -282,13 +288,16 @@ export function createHandlers(
     } catch (e) {
       return fail(`Reload failed: ${e instanceof Error ? e.message : e}. The previous library data is still active.`);
     }
-    return ok(
-      JSON.stringify({
-        reloaded: true,
-        games: state.library.games.length,
-        platforms: state.library.platformCounts.length,
-      }),
-    );
+    const result: Record<string, unknown> = {
+      reloaded: true,
+      games: state.library.games.length,
+      platforms: state.library.platformCounts.length,
+    };
+    if (state.lastReloadDiff) {
+      result.added = state.lastReloadDiff.added;
+      result.removed = state.lastReloadDiff.removed;
+    }
+    return ok(JSON.stringify(result));
   }
 
   return {

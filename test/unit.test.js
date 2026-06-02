@@ -618,6 +618,34 @@ describe('reload_library', () => {
       assert.equal(parsed.platforms, 2);
     }
   });
+
+  it('includes diff when lastReloadDiff is set', async () => {
+    const { handlers, state } = setup();
+    state.lastReloadDiff = {
+      added: [{ id: 'new-1', title: 'New Game', platform: 'Windows' }],
+      removed: [{ id: 'old-1', title: 'Old Game', platform: 'Linux' }],
+    };
+    const result = await handlers.reload_library({});
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.added.length, 1);
+      assert.equal(parsed.added[0].title, 'New Game');
+      assert.equal(parsed.removed.length, 1);
+      assert.equal(parsed.removed[0].title, 'Old Game');
+    }
+  });
+
+  it('omits diff on first load (no prior reload)', async () => {
+    const { handlers } = setup();
+    const result = await handlers.reload_library({});
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.added, undefined);
+      assert.equal(parsed.removed, undefined);
+    }
+  });
 });
 
 describe('utils', () => {
