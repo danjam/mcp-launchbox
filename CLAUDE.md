@@ -36,7 +36,7 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 
 **Source files:**
 - `src/index.ts` — Entrypoint: JSON-RPC error code constants, I/O helpers (`send`, `reply`, `textReply`, `errorReply`, `error`), env var check, library loading, reload concurrency guard, request dispatch with structural validation, readline listener, stdout error handler
-- `src/handlers.ts` — `matchesPlatform` helper, `createHandlers(state, reload)` factory returning `Record<ToolName, ToolHandler>`; all 7 tool handler functions (sync except `handleReloadLibrary`)
+- `src/handlers.ts` — `matchesPlatform` helper, `createHandlers(state, reload)` factory returning `Record<ToolName, ToolHandler>`; all 8 tool handler functions (sync except `handleReloadLibrary`)
 - `src/utils.ts` — Pure helpers: result constructors (`ok`, `fail`), argument validation (`parseLimit`, `asString`, `requireString`), search helpers (`fuseConfidence(score: number)`, `normaliseTitle`, `compactResult`, `sortedPlatformCounts`), response formatting (`formatPlayTime`, `emptyToNull`)
 - `src/tools.ts` — Tool schema definitions with MCP annotations (`as const satisfies MCPToolDefinition[]`); derives `ToolName` union type for type-safe handler map
 - `src/loader.ts` — XML parsing with `htmlEntities`, game extraction, string interning (`loadGames`); `AdditionalApplication` parsing for game versions/storefronts (`extractVersion`); Fuse.js index building (full + per-platform + title-only variants), `gamesByTitle` (lowercase) and `gamesByNormalisedTitle` maps for fast-path lookups, `normalisingGetFn` custom Fuse getter for punctuation-normalised matching, precomputed `platformCounts` and `duplicateGroups` (`buildLibrary`); exports `FUSE_OPTIONS` and `FUSE_TITLE_ONLY_OPTIONS`
@@ -71,6 +71,8 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 - `check_library` includes `nearMisses` (up to 5 candidates with confidence 0.40–0.84) when `matches` is empty; a nearMiss with confidence 0 means a shorter title exists — search the head title to confirm ownership
 - `check_library` results don't include storefront/version info — use `get_game_details` for that
 - `list_games` returns `{ total, results }` where results are compact game objects without confidence; supports filters (`platform`, `installed`, `favorite`), sort (`title`, `dateAdded`, `lastPlayed`, `playTime`), and pagination (`limit`, `offset`)
+- `get_stats` includes `statusCounts` — all distinct progress values with counts, sorted descending
+- `reload_library` returns `added`/`removed` arrays (id, title, platform) showing what changed since the previous load; omitted on first load
 
 **Key dependencies:** `fast-xml-parser` for XML parsing, `fuse.js` for fuzzy search.
 
