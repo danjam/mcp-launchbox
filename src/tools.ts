@@ -13,7 +13,7 @@ export const tools = [
         limit: { type: 'integer', description: 'Max results (default 25)' },
         exact: {
           type: 'boolean',
-          description: 'Skip normalisation (dashes, colons, &→and)',
+          description: 'Exact title match only, no fuzzy search (default false)',
         },
       },
       required: ['query'],
@@ -36,7 +36,7 @@ export const tools = [
         platform: { type: 'string', description: "Platform (e.g. 'Windows', 'Arcade')" },
         exact: {
           type: 'boolean',
-          description: 'Skip normalisation (dashes, colons, &→and)',
+          description: 'Exact title match only, no fuzzy search (default false)',
         },
       },
       required: ['games'],

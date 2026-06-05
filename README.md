@@ -88,11 +88,11 @@ Tool: `search_games`
 | `query` | string | Yes | Game title or series |
 | `platform` | string | No | Platform (e.g. 'Windows', 'Arcade') |
 | `limit` | number | No | Max results (default 25) |
-| `exact` | boolean | No | Skip normalisation (dashes, colons, &→and) |
+| `exact` | boolean | No | Exact title match only, no fuzzy search (default false) |
 
 ### Check Library
 
-Check which games from a list are already in the library. Uses exact title matching first, then fuzzy matching — only matches with confidence ≥0.85 are included to avoid false positives. When no match is found, `nearMisses` shows up to 5 close candidates for diagnostics. A nearMiss with `prefixMatch: true` (no confidence field) means a shorter version of the title exists in the library (e.g. "Behind the Frame" for query "Behind the Frame: The Finest Scenery") — search the shorter title to confirm ownership. Punctuation is normalised before matching by default.
+Check which games from a list are already in the library. Uses normalised title matching first, then fuzzy matching — only matches with confidence ≥0.85 are included to avoid false positives. When `exact` is true, only exact title matches are returned with no fuzzy or prefix fallback. When no match is found, `nearMisses` shows up to 5 close candidates for diagnostics. A nearMiss with `prefixMatch: true` (no confidence field) means a shorter version of the title exists in the library (e.g. "Behind the Frame" for query "Behind the Frame: The Finest Scenery") — search the shorter title to confirm ownership. Punctuation is normalised before matching by default.
 
 Results do not include storefront or version info — use `get_game_details` for that.
 
@@ -104,7 +104,7 @@ Tool: `check_library`
 |-----------|------|----------|-------------|
 | `games` | string[] | Yes | Game titles to look up |
 | `platform` | string | No | Platform (e.g. 'Windows', 'Arcade') |
-| `exact` | boolean | No | Skip normalisation (dashes, colons, &→and) |
+| `exact` | boolean | No | Exact title match only, no fuzzy search (default false) |
 
 ### Get Game Details
 
