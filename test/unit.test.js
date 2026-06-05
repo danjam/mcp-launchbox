@@ -7,7 +7,7 @@ import { FUSE_OPTIONS, FUSE_TITLE_ONLY_OPTIONS } from '../dist/loader.js';
 import { buildToolDefinitions } from '../dist/tools.js';
 import {
   normaliseTitle, parseLimit, asString, compactResult, fail, fuseConfidence, ok,
-  passesTokenBoundaryGuard, tokenMatchConfidence,
+  tokenMatchConfidence,
   requireString, sortedPlatformCounts,
 } from '../dist/utils.js';
 
@@ -276,12 +276,16 @@ function mockLibrary() {
     .sort((a, b) => b.entries - a.entries);
   const statusMap = new Map();
   for (const g of games) {
-    if (g.Progress) statusMap.set(g.Progress, (statusMap.get(g.Progress) ?? 0) + 1);
+    const status = g.Progress || 'No Status';
+    statusMap.set(status, (statusMap.get(status) ?? 0) + 1);
   }
-  const distinctStatuses = [...statusMap.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => s);
+  const statusCounts = [...statusMap.entries()]
+    .map(([status, count]) => ({ status, count }))
+    .sort((a, b) => b.count - a.count);
+  const distinctStatuses = statusCounts.filter((s) => s.status !== 'No Status').map((s) => s.status);
   return {
     gamesById, gamesByTitle, gamesByNormalisedTitle, games, versionsByGameId: new Map(),
-    fuse, fuseTitleOnly, platformFuse, platformFuseTitleOnly, platformCounts, duplicateGroups, distinctStatuses,
+    fuse, fuseTitleOnly, platformFuse, platformFuseTitleOnly, platformCounts, duplicateGroups, statusCounts, distinctStatuses,
   };
 }
 
@@ -1087,7 +1091,7 @@ describe('check_library', () => {
     const lib = {
       gamesById, gamesByTitle, gamesByNormalisedTitle, games, versionsByGameId: new Map(),
       fuse, fuseTitleOnly, platformFuse: new Map(), platformFuseTitleOnly: new Map(),
-      platformCounts: sortedPlatformCounts(games), duplicateGroups: [], distinctStatuses: [],
+      platformCounts: sortedPlatformCounts(games), duplicateGroups: [], statusCounts: [], distinctStatuses: [],
     };
     const state = { library: lib };
     const handlers = createHandlers(state, async () => {});
@@ -1355,71 +1359,69 @@ describe('utils', () => {
     });
   });
 
-  describe('passesTokenBoundaryGuard', () => {
+  describe('tokenMatchConfidence as boundary guard (=== 1.0 means all tokens match)', () => {
     // --- Single-token cases (regression for #2) ---
     it('rejects single-token query that is only a mid-token substring (#2)', () => {
-      assert.equal(passesTokenBoundaryGuard('gord', 'flash gordon'), false);
+      assert.ok(tokenMatchConfidence('gord', 'flash gordon') < 1.0);
     });
 
     it('accepts single-token query that matches a complete title token', () => {
-      assert.equal(passesTokenBoundaryGuard('halo', 'halo 2'), true);
+      assert.equal(tokenMatchConfidence('halo', 'halo 2'), 1.0);
     });
 
     it('accepts a small typo within the per-length tolerance', () => {
-      // 6-char query vs a 6-char title token, single-char substitution.
-      // tolerance = floor(6/4) = 1, so this passes.
-      assert.equal(passesTokenBoundaryGuard('starss', 'starsx'), true);
+      assert.equal(tokenMatchConfidence('starss', 'starsx'), 1.0);
     });
 
     it('rejects a single-token query when no title token is close enough', () => {
-      assert.equal(passesTokenBoundaryGuard('zzzzz', 'half life 2'), false);
+      assert.ok(tokenMatchConfidence('zzzzz', 'half life 2') < 1.0);
     });
 
     it('handles short queries strictly (3-char query: exact only)', () => {
-      assert.equal(passesTokenBoundaryGuard('rim', 'rimworld'), false);
-      assert.equal(passesTokenBoundaryGuard('rim', 'rim runner'), true);
+      assert.ok(tokenMatchConfidence('rim', 'rimworld') < 1.0);
+      assert.equal(tokenMatchConfidence('rim', 'rim runner'), 1.0);
     });
 
     it('treats title hyphens as token separators (normalisation contract)', () => {
-      assert.equal(passesTokenBoundaryGuard('half', 'half life 2'), true);
+      assert.equal(tokenMatchConfidence('half', 'half life 2'), 1.0);
     });
 
     // --- Multi-token: token absorption false positives ---
     it('rejects "halo 2" vs "halo 2600" (token absorption)', () => {
-      assert.equal(passesTokenBoundaryGuard('halo 2', 'halo 2600'), false);
+      assert.ok(tokenMatchConfidence('halo 2', 'halo 2600') < 1.0);
     });
 
     it('rejects "grand theft auto v" vs "grand theft auto vice city" (token absorption)', () => {
-      assert.equal(passesTokenBoundaryGuard('grand theft auto v', 'grand theft auto vice city'), false);
+      assert.ok(tokenMatchConfidence('grand theft auto v', 'grand theft auto vice city') < 1.0);
     });
 
     it('rejects "street fighter 2" vs "street fighter 2010 the final fight" (token absorption)', () => {
-      assert.equal(passesTokenBoundaryGuard('street fighter 2', 'street fighter 2010 the final fight'), false);
+      assert.ok(tokenMatchConfidence('street fighter 2', 'street fighter 2010 the final fight') < 1.0);
     });
 
     // --- Multi-token: legitimate matches that must still pass ---
     it('accepts "fallout 3" vs "fallout 3" (exact match)', () => {
-      assert.equal(passesTokenBoundaryGuard('fallout 3', 'fallout 3'), true);
+      assert.equal(tokenMatchConfidence('fallout 3', 'fallout 3'), 1.0);
     });
 
     it('accepts "the witcher 3" vs "the witcher 3 wild hunt" (all query tokens match)', () => {
-      assert.equal(passesTokenBoundaryGuard('the witcher 3', 'the witcher 3 wild hunt'), true);
+      assert.equal(tokenMatchConfidence('the witcher 3', 'the witcher 3 wild hunt'), 1.0);
     });
 
     it('accepts "pac man" vs "pac man" (exact match)', () => {
-      assert.equal(passesTokenBoundaryGuard('pac man', 'pac man'), true);
+      assert.equal(tokenMatchConfidence('pac man', 'pac man'), 1.0);
     });
 
     it('accepts "half life 2" vs "half life 2" (exact match)', () => {
-      assert.equal(passesTokenBoundaryGuard('half life 2', 'half life 2'), true);
+      assert.equal(tokenMatchConfidence('half life 2', 'half life 2'), 1.0);
     });
 
     it('accepts multi-token query when all tokens have whole-token matches', () => {
-      assert.equal(passesTokenBoundaryGuard('flash gordon', 'flash gordon'), true);
+      assert.equal(tokenMatchConfidence('flash gordon', 'flash gordon'), 1.0);
     });
 
     it('rejects multi-token query when a token has no whole-token match', () => {
-      assert.equal(passesTokenBoundaryGuard('flash gord', 'flash gordon'), false);
+      assert.ok(tokenMatchConfidence('flash gord', 'flash gordon') < 1.0);
     });
   });
 

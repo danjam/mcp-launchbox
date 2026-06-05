@@ -38,6 +38,7 @@ function toNum(val: unknown): number {
 
 function extractGame(raw: Record<string, unknown>): Game {
   const platform = intern(raw.Platform);
+  const lastPlayed = toStr(raw.LastPlayedDate);
   return {
     ID: toStr(raw.ID),
     Title: toStr(raw.Title),
@@ -61,7 +62,7 @@ function extractGame(raw: Record<string, unknown>): Game {
     Broken: toBool(raw.Broken),
     PlayCount: toNum(raw.PlayCount),
     PlayTime: toNum(raw.PlayTime),
-    LastPlayedDate: toStr(raw.LastPlayedDate).startsWith('1970-') ? '' : toStr(raw.LastPlayedDate),
+    LastPlayedDate: lastPlayed.startsWith('1970-') ? '' : lastPlayed,
     DateAdded: toStr(raw.DateAdded),
     Installed: toBool(raw.Installed),
     Completed: toBool(raw.Completed),
@@ -268,9 +269,13 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
 
   const statusMap = new Map<string, number>();
   for (const g of games) {
-    if (g.Progress) statusMap.set(g.Progress, (statusMap.get(g.Progress) ?? 0) + 1);
+    const status = g.Progress || 'No Status';
+    statusMap.set(status, (statusMap.get(status) ?? 0) + 1);
   }
-  const distinctStatuses = [...statusMap.entries()].sort((a, b) => b[1] - a[1]).map(([status]) => status);
+  const statusCounts = [...statusMap.entries()]
+    .map(([status, count]) => ({ status, count }))
+    .sort((a, b) => b.count - a.count);
+  const distinctStatuses = statusCounts.filter((s) => s.status !== 'No Status').map((s) => s.status);
 
   return {
     gamesById,
@@ -284,6 +289,7 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
     platformFuseTitleOnly,
     platformCounts,
     duplicateGroups,
+    statusCounts,
     distinctStatuses,
   };
 }
@@ -320,5 +326,6 @@ export interface Library {
   readonly platformFuseTitleOnly: ReadonlyMap<string, Fuse<Game>>;
   readonly platformCounts: readonly { platform: string; count: number }[];
   readonly duplicateGroups: readonly DuplicateGroup[];
+  readonly statusCounts: readonly { status: string; count: number }[];
   readonly distinctStatuses: readonly string[];
 }

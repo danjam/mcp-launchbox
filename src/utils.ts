@@ -14,6 +14,12 @@ export function parseLimit(val: unknown, fallback: number): number | ToolResult 
   return Number.isInteger(n) && n > 0 ? n : fail(`limit must be an integer greater than 0, got: ${val}`);
 }
 
+export function parseOffset(val: unknown): number | ToolResult {
+  if (val === undefined || val === null) return 0;
+  const n = Number(val);
+  return Number.isInteger(n) && n >= 0 ? n : fail(`offset must be a non-negative integer, got: ${val}`);
+}
+
 export function asString(val: unknown): string | undefined | ToolResult {
   if (val === undefined || val === null) return undefined;
   return typeof val === 'string' ? val : fail(`Expected string, got ${typeof val}`);
@@ -67,39 +73,10 @@ export function levenshteinAtMost(a: string, b: string, cap: number): number {
   return prev[bLen];
 }
 
-// Token-boundary guard: every query token must have a close whole-token
-// Levenshtein match against the title tokens. Prevents short differentiating
-// tokens (e.g. "2" in "Halo 2") being absorbed into longer title tokens
-// (e.g. "2600" in "Halo 2600") which Fuse.js scores as near-perfect.
-//
-// Both `query` and `title` are expected to be normalised (see
-// `normaliseTitle`). Typos are still allowed via a small Levenshtein
-// tolerance proportional to token length: `floor(length / 4)` for tokens
-// >= 5 chars, 0 for shorter tokens.
-export function passesTokenBoundaryGuard(query: string, title: string): boolean {
-  const queryTokens = query.split(/\s+/).filter(Boolean);
-  if (queryTokens.length === 0) return true;
-  const titleTokens = title.split(/\s+/).filter(Boolean);
-  for (const q of queryTokens) {
-    // Allow ~1 typo per 4 characters, bounded so 3-char queries are exact-ish.
-    const tolerance = q.length >= 5 ? Math.floor(q.length / 4) : 0;
-    let matched = false;
-    for (const t of titleTokens) {
-      if (levenshteinAtMost(q, t, tolerance) <= tolerance) {
-        matched = true;
-        break;
-      }
-    }
-    if (!matched) return false;
-  }
-  return true;
-}
-
 // Token confidence penalty: for each query token, check if it matches a
-// whole title token (Levenshtein-tolerant, same formula as the guard above).
-// Returns 1.0 when all query tokens match whole title tokens; for each token
-// that only matches as a substring of a longer title token, applies a 0.75
-// penalty factor. Both `query` and `title` should be normalised.
+// whole title token via Levenshtein with tolerance `floor(length / 4)` for
+// tokens >= 5 chars, 0 for shorter. Returns 1.0 when all query tokens match;
+// each unmatched token applies a 0.75 penalty. Both inputs should be normalised.
 export function tokenMatchConfidence(query: string, title: string): number {
   const queryTokens = query.split(/\s+/).filter(Boolean);
   const titleTokens = title.split(/\s+/).filter(Boolean);
@@ -128,11 +105,7 @@ export function formatPlayTime(seconds: number): { seconds: number; hours: numbe
   return { seconds, hours: Math.round((seconds / 3600) * 10) / 10 };
 }
 
-export function compactResult(
-  game: Game,
-  confidence?: number,
-  exactMatch?: boolean,
-): {
+export interface CompactGame {
   id: string;
   title: string;
   platform: string;
@@ -140,16 +113,10 @@ export function compactResult(
   playTime: { seconds: number; hours: number };
   confidence?: number;
   exactMatch?: boolean;
-} {
-  const result: {
-    id: string;
-    title: string;
-    platform: string;
-    installed: boolean;
-    playTime: { seconds: number; hours: number };
-    confidence?: number;
-    exactMatch?: boolean;
-  } = {
+}
+
+export function compactResult(game: Game, confidence?: number, exactMatch?: boolean): CompactGame {
+  const result: CompactGame = {
     id: game.ID,
     title: game.Title,
     platform: game.Platform,

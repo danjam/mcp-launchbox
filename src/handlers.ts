@@ -11,7 +11,7 @@ import {
   normaliseTitle,
   ok,
   parseLimit,
-  passesTokenBoundaryGuard,
+  parseOffset,
   requireString,
   tokenMatchConfidence,
 } from './utils.js';
@@ -61,14 +61,17 @@ export function createHandlers(
     const results = index.search(normalisedQuery);
 
     const filtered = results.filter((r) => matchesFilters(r.item));
-    const items = filtered.slice(0, limit).map((r) => {
-      const rawConfidence = fuseConfidence(r.score ?? 0);
-      const titleNorm = normaliseTitle(r.item.Title);
-      const penalty = tokenMatchConfidence(normalisedQuery, titleNorm);
-      const confidence = Math.round(rawConfidence * penalty * 100) / 100;
-      const isExactMatch = normalisedQuery === titleNorm;
-      return compactResult(r.item, confidence, isExactMatch || undefined);
-    }).filter((r) => r.confidence !== undefined && r.confidence > 0);
+    const items = filtered
+      .slice(0, limit)
+      .map((r) => {
+        const rawConfidence = fuseConfidence(r.score ?? 0);
+        const titleNorm = normaliseTitle(r.item.Title);
+        const penalty = tokenMatchConfidence(normalisedQuery, titleNorm);
+        const confidence = Math.round(rawConfidence * penalty * 100) / 100;
+        const isExactMatch = normalisedQuery === titleNorm;
+        return compactResult(r.item, confidence, isExactMatch || undefined);
+      })
+      .filter((r) => r.confidence !== undefined && r.confidence > 0);
 
     return ok(JSON.stringify({ results: items }));
   }
@@ -156,7 +159,7 @@ export function createHandlers(
         const penalty = tokenMatchConfidence(normalisedQuery, titleNorm);
         const confidence = Math.round(rawConfidence * penalty * 100) / 100;
         if (confidence < NEAR_MISS_FLOOR) continue;
-        if (rawConfidence >= CONFIDENCE_THRESHOLD && passesTokenBoundaryGuard(normalisedQuery, titleNorm)) {
+        if (rawConfidence >= CONFIDENCE_THRESHOLD && penalty === 1.0) {
           if (matches.length < MAX_MATCHES) matches.push(compactResult(r.item, confidence));
         } else if (nearMisses.length < 5) {
           nearMisses.push({ title: r.item.Title, platform: r.item.Platform, confidence });
@@ -172,7 +175,7 @@ export function createHandlers(
       // nearMisses with `shorterTitle: true` — not matches — prefix hits
       // are leads, not ownership assertions.
       if (nearMisses.length < 5) {
-        const normTokens = normaliseTitle(query).split(/\s+/).filter(Boolean);
+        const normTokens = normalisedQuery.split(/\s+/).filter(Boolean);
         for (let i = normTokens.length - 1; i >= 1; i--) {
           const prefix = normTokens.slice(0, i).join(' ');
           let prefixCandidates = state.library.gamesByNormalisedTitle.get(prefix);
@@ -246,7 +249,11 @@ export function createHandlers(
     if (args.status !== undefined && args.status !== null) {
       if (typeof args.status === 'string') {
         statusFilter = [args.status];
-      } else if (Array.isArray(args.status) && args.status.length > 0 && args.status.every((s) => typeof s === 'string')) {
+      } else if (
+        Array.isArray(args.status) &&
+        args.status.length > 0 &&
+        args.status.every((s) => typeof s === 'string')
+      ) {
         statusFilter = args.status as string[];
       } else {
         return fail('status must be a string or array of strings');
@@ -266,14 +273,8 @@ export function createHandlers(
   function handleListGames(args: Record<string, unknown>): ToolResult {
     const limit = parseLimit(args.limit, 25);
     if (typeof limit !== 'number') return limit;
-    const offsetVal = args.offset;
-    const offset =
-      offsetVal === undefined || offsetVal === null
-        ? 0
-        : Number.isInteger(Number(offsetVal)) && Number(offsetVal) >= 0
-          ? Number(offsetVal)
-          : undefined;
-    if (offset === undefined) return fail(`offset must be a non-negative integer, got: ${offsetVal}`);
+    const offset = parseOffset(args.offset);
+    if (typeof offset !== 'number') return offset;
     const sort = asString(args.sort);
     if (typeof sort === 'object') return sort;
     const validSorts = ['title', 'dateAdded', 'lastPlayedDate', 'playTime'] as const;
@@ -282,7 +283,7 @@ export function createHandlers(
     const sortKey = (sort ?? 'title') as (typeof validSorts)[number];
 
     const filtered = applyFilters(args);
-    if (!Array.isArray(filtered) && 'ok' in filtered) return filtered;
+    if ('ok' in filtered) return filtered;
 
     const sorted = [...filtered].sort((a, b) => {
       switch (sortKey) {
@@ -317,10 +318,8 @@ export function createHandlers(
     if (query) query = query.trim() || undefined;
     const limit = parseLimit(args.limit, 25);
     if (typeof limit !== 'number') return limit;
-    const offsetVal = args.offset;
-    const offset =
-      offsetVal === undefined || offsetVal === null ? 0 : typeof offsetVal === 'number' && Number.isInteger(offsetVal) && offsetVal >= 0 ? offsetVal : -1;
-    if (offset === -1) return fail(`offset must be a non-negative integer, got: ${String(offsetVal)}`);
+    const offset = parseOffset(args.offset);
+    if (typeof offset !== 'number') return offset;
 
     if (!query) {
       const page = state.library.duplicateGroups.slice(offset, offset + limit);
@@ -346,29 +345,19 @@ export function createHandlers(
 
   function handleGetStats(): ToolResult {
     const platforms = state.library.platformCounts;
-
-    const statusMap = new Map<string, number>();
-    for (const g of state.library.games) {
-      const status = g.Progress || 'No Status';
-      statusMap.set(status, (statusMap.get(status) ?? 0) + 1);
-    }
-    const statusCounts = [...statusMap.entries()]
-      .map(([status, count]) => ({ status, count }))
-      .sort((a, b) => b.count - a.count);
-
-    const stats = {
-      totalGames: state.library.games.length,
-      totalPlatforms: platforms.length,
-      topPlatforms: platforms.slice(0, 10),
-      statusCounts,
-    };
-
-    return ok(JSON.stringify(stats));
+    return ok(
+      JSON.stringify({
+        totalGames: state.library.games.length,
+        totalPlatforms: platforms.length,
+        topPlatforms: platforms.slice(0, 10),
+        statusCounts: state.library.statusCounts,
+      }),
+    );
   }
 
   function handleRandomGame(args: Record<string, unknown>): ToolResult {
     const filtered = applyFilters(args);
-    if (!Array.isArray(filtered) && 'ok' in filtered) return filtered;
+    if ('ok' in filtered) return filtered;
 
     if (filtered.length === 0) return ok(JSON.stringify({ game: null, matchPool: 0 }));
 

@@ -1,5 +1,10 @@
 import type { MCPToolDefinition } from './types.js';
 
+const STATUS_SCHEMA = {
+  oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
+  description: 'Progress status (OR logic for arrays)',
+} as const;
+
 export const tools = [
   {
     name: 'search_games',
@@ -84,10 +89,7 @@ export const tools = [
           description:
             'Sort order; default "title". dateAdded/lastPlayedDate: most recent first; playTime: most played first',
         },
-        status: {
-          oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
-          description: 'Progress status (OR logic for arrays)',
-        },
+        status: STATUS_SCHEMA,
         limit: { type: 'integer', description: 'Max results (default 25)' },
         offset: { type: 'integer', description: 'Results to skip (default 0)' },
       },
@@ -128,10 +130,7 @@ export const tools = [
         platform: { type: 'string', description: "Platform (e.g. 'Windows', 'Arcade')" },
         installed: { type: 'boolean', description: 'true = installed only, false = uninstalled only, omit = all' },
         favorite: { type: 'boolean', description: 'true = favorites only, false = non-favorites only, omit = all' },
-        status: {
-          oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
-          description: 'Progress status (OR logic for arrays)',
-        },
+        status: STATUS_SCHEMA,
       },
     },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: false },
