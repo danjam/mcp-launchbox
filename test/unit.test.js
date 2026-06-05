@@ -446,6 +446,60 @@ describe('list_games', () => {
   });
 });
 
+describe('random_game', () => {
+  const { handlers } = setup();
+
+  it('returns a game from the library', async () => {
+    const result = await handlers.random_game({});
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.ok(parsed.game);
+      assert.ok(parsed.game.id);
+      assert.ok(parsed.game.title);
+      assert.ok(parsed.game.platform);
+      assert.ok('dateAdded' in parsed.game);
+      assert.ok('lastPlayed' in parsed.game);
+      assert.equal(parsed.matchPool, 4);
+    }
+  });
+
+  it('filters by platform', async () => {
+    const result = await handlers.random_game({ platform: 'Linux' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.game.platform, 'Linux');
+      assert.equal(parsed.matchPool, 1);
+    }
+  });
+
+  it('filters by status', async () => {
+    const result = await handlers.random_game({ status: 'Active / In Progress' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.ok(['Half-Life 2', 'Portal'].includes(parsed.game.title));
+      assert.equal(parsed.matchPool, 2);
+    }
+  });
+
+  it('returns null game when no matches', async () => {
+    const result = await handlers.random_game({ platform: 'Virtual Boy' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.game, null);
+      assert.equal(parsed.matchPool, 0);
+    }
+  });
+
+  it('rejects invalid status', async () => {
+    const result = await handlers.random_game({ status: 123 });
+    assert.equal(result.ok, false);
+  });
+});
+
 describe('list_platforms', () => {
   const { handlers } = setup();
 
@@ -955,6 +1009,13 @@ describe('buildToolDefinitions', () => {
     assert.ok(listGames);
     assert.ok(listGames.inputSchema.properties.status.description.includes('Active / In Progress'));
     assert.ok(listGames.inputSchema.properties.status.description.includes('Completed'));
+  });
+
+  it('injects status values into random_game description', () => {
+    const tools = buildToolDefinitions(['Active / In Progress', 'Completed']);
+    const randomGame = tools.find((t) => t.name === 'random_game');
+    assert.ok(randomGame);
+    assert.ok(randomGame.inputSchema.properties.status.description.includes('Active / In Progress'));
   });
 
   it('does not modify other tools', () => {

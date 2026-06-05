@@ -153,6 +153,19 @@ Tool: `find_duplicates`
 | `query` | string | No | Optional title filter (fuzzy match) |
 | `limit` | number | No | Max duplicate groups to return (default 25) |
 
+### Random Game
+
+Pick a random game from the library, optionally filtered. Use for "what should I play?" or "surprise me" queries. Returns a single game (same shape as `list_games` results) plus `matchPool` showing how many games matched the filters. Returns `null` game when no matches.
+
+Tool: `random_game`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `platform` | string | No | Filter by platform name |
+| `installed` | boolean | No | Filter by installed status |
+| `favorite` | boolean | No | Filter by favorite status |
+| `status` | string \| string[] | No | Filter by progress status (exact match, OR logic for arrays) |
+
 ### Get Stats
 
 Get library summary statistics (total games, total platforms, top 10 platforms by game count, and status counts). `statusCounts` lists all distinct progress values with their counts, sorted descending — use it to discover what free-form status values exist in the library. No parameters needed.

@@ -187,25 +187,9 @@ export function createHandlers(
     return ok(JSON.stringify(detail));
   }
 
-  function handleListGames(args: Record<string, unknown>): ToolResult {
+  function applyFilters(args: Record<string, unknown>): readonly Game[] | ToolResult {
     const platform = asString(args.platform);
     if (typeof platform === 'object') return platform;
-    const limit = parseLimit(args.limit, 25);
-    if (typeof limit !== 'number') return limit;
-    const offsetVal = args.offset;
-    const offset =
-      offsetVal === undefined || offsetVal === null
-        ? 0
-        : Number.isInteger(Number(offsetVal)) && Number(offsetVal) >= 0
-          ? Number(offsetVal)
-          : undefined;
-    if (offset === undefined) return fail(`offset must be a non-negative integer, got: ${offsetVal}`);
-    const sort = asString(args.sort);
-    if (typeof sort === 'object') return sort;
-    const validSorts = ['title', 'dateAdded', 'lastPlayed', 'playTime'] as const;
-    if (sort && !validSorts.includes(sort as (typeof validSorts)[number]))
-      return fail(`sort must be one of: ${validSorts.join(', ')}`);
-    const sortKey = (sort ?? 'title') as (typeof validSorts)[number];
 
     let statusFilter: string[] | undefined;
     if (args.status !== undefined && args.status !== null) {
@@ -225,6 +209,29 @@ export function createHandlers(
     if (args.favorite === true) filtered = filtered.filter((g) => g.Favorite);
     if (args.favorite === false) filtered = filtered.filter((g) => !g.Favorite);
     if (statusFilter) filtered = filtered.filter((g) => statusFilter.includes(g.Progress));
+    return filtered;
+  }
+
+  function handleListGames(args: Record<string, unknown>): ToolResult {
+    const limit = parseLimit(args.limit, 25);
+    if (typeof limit !== 'number') return limit;
+    const offsetVal = args.offset;
+    const offset =
+      offsetVal === undefined || offsetVal === null
+        ? 0
+        : Number.isInteger(Number(offsetVal)) && Number(offsetVal) >= 0
+          ? Number(offsetVal)
+          : undefined;
+    if (offset === undefined) return fail(`offset must be a non-negative integer, got: ${offsetVal}`);
+    const sort = asString(args.sort);
+    if (typeof sort === 'object') return sort;
+    const validSorts = ['title', 'dateAdded', 'lastPlayed', 'playTime'] as const;
+    if (sort && !validSorts.includes(sort as (typeof validSorts)[number]))
+      return fail(`sort must be one of: ${validSorts.join(', ')}`);
+    const sortKey = (sort ?? 'title') as (typeof validSorts)[number];
+
+    const filtered = applyFilters(args);
+    if (!Array.isArray(filtered) && 'ok' in filtered) return filtered;
 
     const sorted = [...filtered].sort((a, b) => {
       switch (sortKey) {
@@ -302,6 +309,21 @@ export function createHandlers(
     return ok(JSON.stringify(stats));
   }
 
+  function handleRandomGame(args: Record<string, unknown>): ToolResult {
+    const filtered = applyFilters(args);
+    if (!Array.isArray(filtered) && 'ok' in filtered) return filtered;
+
+    if (filtered.length === 0) return ok(JSON.stringify({ game: null, matchPool: 0 }));
+
+    const pick = filtered[Math.floor(Math.random() * filtered.length)] as Game;
+    const game = {
+      ...compactResult(pick),
+      dateAdded: emptyToNull(pick.DateAdded),
+      lastPlayed: emptyToNull(pick.LastPlayedDate),
+    };
+    return ok(JSON.stringify({ game, matchPool: filtered.length }));
+  }
+
   async function handleReloadLibrary(): Promise<ToolResult> {
     try {
       await reload();
@@ -328,6 +350,7 @@ export function createHandlers(
     list_platforms: handleListPlatforms,
     find_duplicates: handleFindDuplicates,
     get_stats: handleGetStats,
+    random_game: handleRandomGame,
     reload_library: handleReloadLibrary,
   };
 }

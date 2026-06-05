@@ -36,7 +36,7 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 
 **Source files:**
 - `src/index.ts` — Entrypoint: JSON-RPC error code constants, I/O helpers (`send`, `reply`, `textReply`, `errorReply`, `error`), env var check, library loading, reload concurrency guard, request dispatch with structural validation, readline listener, stdout error handler
-- `src/handlers.ts` — `matchesPlatform` helper, `createHandlers(state, reload)` factory returning `Record<ToolName, ToolHandler>`; all 8 tool handler functions (sync except `handleReloadLibrary`)
+- `src/handlers.ts` — `matchesPlatform` helper, `applyFilters` shared filter logic (platform, installed, favorite, status), `createHandlers(state, reload)` factory returning `Record<ToolName, ToolHandler>`; all 9 tool handler functions (sync except `handleReloadLibrary`)
 - `src/utils.ts` — Pure helpers: result constructors (`ok`, `fail`), argument validation (`parseLimit`, `asString`, `requireString`), search helpers (`fuseConfidence(score: number)`, `normaliseTitle`, `compactResult`, `sortedPlatformCounts`), response formatting (`formatPlayTime`, `emptyToNull`)
 - `src/tools.ts` — Tool schema definitions with MCP annotations (`as const satisfies MCPToolDefinition[]`); derives `ToolName` union type for type-safe handler map; `buildToolDefinitions(statusValues)` returns dynamic tool schemas with status values injected into `list_games` description
 - `src/loader.ts` — XML parsing with `htmlEntities`, game extraction, string interning (`loadGames`); `AdditionalApplication` parsing for game versions/storefronts (`extractVersion`); Fuse.js index building (full + per-platform + title-only variants), `gamesByTitle` (lowercase) and `gamesByNormalisedTitle` maps for fast-path lookups, `normalisingGetFn` custom Fuse getter for punctuation-normalised matching, precomputed `platformCounts` and `duplicateGroups` (`buildLibrary`); exports `FUSE_OPTIONS` and `FUSE_TITLE_ONLY_OPTIONS`
@@ -62,7 +62,7 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 - `buildLibrary()` returns a `Library` object held in a mutable `state` ref so `reload_library` can swap it
 - Concurrent `reload_library` calls coalesce (second call awaits the first)
 
-**Tools exposed:** `search_games`, `check_library`, `get_game_details`, `list_games`, `list_platforms`, `find_duplicates`, `get_stats`, `reload_library`.
+**Tools exposed:** `search_games`, `check_library`, `get_game_details`, `list_games`, `list_platforms`, `find_duplicates`, `get_stats`, `random_game`, `reload_library`.
 
 **Response conventions:**
 - `playTime` is always `{seconds, hours}` (hours rounded to 1 decimal)
@@ -73,6 +73,7 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 - `check_library` results don't include storefront/version info — use `get_game_details` for that
 - `list_games` returns `{ total, results }` where results are compact game objects without confidence but with `dateAdded` and `lastPlayed` fields; supports filters (`platform`, `installed`, `favorite`, `status`), sort (`title`, `dateAdded`, `lastPlayed`, `playTime`), and pagination (`limit`, `offset`)
 - `list_games` `status` filter accepts a string or array of strings (OR logic); matches against `game.Progress` exactly
+- `random_game` returns `{ game, matchPool }` — same compact shape as `list_games` results plus `dateAdded`/`lastPlayed`; `game` is `null` when no matches; shares filter logic with `list_games` via `applyFilters`
 - `get_stats` includes `statusCounts` — all distinct progress values with counts, sorted descending
 - `reload_library` returns `added`/`removed` arrays (id, title, platform) showing what changed since the previous load; omitted on first load
 - `reload_library` sends `notifications/tools/list_changed` if the set of distinct status values changed, so clients re-fetch tool schemas with updated status descriptions

@@ -112,6 +112,24 @@ export const tools = [
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
+    name: 'random_game',
+    description:
+      'Pick a random game from the library, optionally filtered. Use for "what should I play?" or "surprise me" queries. Returns a single game with the same shape as list_games results, plus matchPool (how many games matched the filters).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        platform: { type: 'string', description: "Filter by platform name (e.g. 'Windows', 'Arcade')" },
+        installed: { type: 'boolean', description: 'Filter by installed status' },
+        favorite: { type: 'boolean', description: 'Filter by favorite status' },
+        status: {
+          oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
+          description: 'Filter by progress status (OR logic for arrays)',
+        },
+      },
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  },
+  {
     name: 'reload_library',
     description:
       'Reload the game library from disk. Use after adding or removing games in LaunchBox. Returns game/platform counts plus added/removed arrays showing what changed since the previous load (id, title, platform for each).',
@@ -129,7 +147,7 @@ export function buildToolDefinitions(statusValues: readonly string[]): MCPToolDe
   if (statusValues.length === 0) return [...tools];
   const statusDescription = `Filter by progress status (OR logic for arrays). Valid values: ${statusValues.join(', ')}`;
   return tools.map((t) => {
-    if (t.name !== 'list_games') return t;
+    if (!('status' in t.inputSchema.properties)) return t;
     return {
       ...t,
       inputSchema: {
