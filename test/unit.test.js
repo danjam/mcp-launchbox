@@ -463,6 +463,42 @@ describe('search_games', () => {
       assert.equal(eternal.exactMatch, undefined);
     }
   });
+
+  it('filters by installed', async () => {
+    const result = await handlers.search_games({ query: 'Half-Life 2', installed: true });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.ok(parsed.results.every((r) => r.installed === true));
+    }
+  });
+
+  it('filters by installed: false', async () => {
+    const result = await handlers.search_games({ query: 'Half-Life 2', installed: false });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.ok(parsed.results.every((r) => r.installed === false));
+    }
+  });
+
+  it('filters by favorite', async () => {
+    const result = await handlers.search_games({ query: 'Half-Life', favorite: true });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.ok(parsed.results.length > 0);
+    }
+  });
+
+  it('exact:true respects installed filter', async () => {
+    const result = await handlers.search_games({ query: 'Half-Life 2', exact: true, installed: true });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.ok(parsed.results.every((r) => r.installed === true));
+    }
+  });
 });
 
 describe('get_game_details', () => {

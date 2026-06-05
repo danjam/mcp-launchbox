@@ -40,10 +40,15 @@ export function createHandlers(
     const limit = parseLimit(args.limit, 25);
     if (typeof limit !== 'number') return limit;
     const exact = args.exact === true;
+    const installed = args.installed;
+    const favorite = args.favorite;
+    const matchesFilters = (g: Game) =>
+      (installed === undefined || g.Installed === installed) && (favorite === undefined || g.Favorite === favorite);
 
     if (exact) {
       let candidates = state.library.gamesByTitle.get(query.toLowerCase()) ?? [];
       if (platform) candidates = candidates.filter((g) => matchesPlatform(g.Platform, platform));
+      candidates = candidates.filter(matchesFilters);
       const items = candidates.slice(0, limit).map((g) => compactResult(g, 1.0, true));
       return ok(JSON.stringify({ results: items }));
     }
@@ -54,7 +59,8 @@ export function createHandlers(
     const normalisedQuery = normaliseTitle(query);
     const results = index.search(normalisedQuery);
 
-    const items = results.slice(0, limit).map((r) => {
+    const filtered = results.filter((r) => matchesFilters(r.item));
+    const items = filtered.slice(0, limit).map((r) => {
       const rawConfidence = fuseConfidence(r.score ?? 0);
       const titleNorm = normaliseTitle(r.item.Title);
       const penalty = tokenMatchConfidence(normalisedQuery, titleNorm);

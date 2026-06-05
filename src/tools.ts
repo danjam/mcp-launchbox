@@ -10,6 +10,8 @@ export const tools = [
       properties: {
         query: { type: 'string', description: 'Game title or series' },
         platform: { type: 'string', description: "Platform (e.g. 'Windows', 'Arcade')" },
+        installed: { type: 'boolean', description: 'true = installed only, false = uninstalled only, omit = all' },
+        favorite: { type: 'boolean', description: 'true = favorites only, false = non-favorites only, omit = all' },
         limit: { type: 'integer', description: 'Max results (default 25)' },
         exact: {
           type: 'boolean',
