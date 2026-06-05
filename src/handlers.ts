@@ -37,8 +37,9 @@ export function createHandlers(
     if (query === '') return fail('query is required (non-empty string)');
     const platform = asString(args.platform);
     if (typeof platform === 'object') return platform;
-    const limit = parseLimit(args.limit, 25);
-    if (typeof limit !== 'number') return limit;
+    const rawLimit = parseLimit(args.limit, 25);
+    if (typeof rawLimit !== 'number') return rawLimit;
+    const limit = Math.min(rawLimit, 100);
     const exact = args.exact === true;
     const installed = args.installed;
     const favorite = args.favorite;
@@ -313,9 +314,14 @@ export function createHandlers(
     if (query) query = query.trim() || undefined;
     const limit = parseLimit(args.limit, 25);
     if (typeof limit !== 'number') return limit;
+    const offsetVal = args.offset;
+    const offset =
+      offsetVal === undefined || offsetVal === null ? 0 : typeof offsetVal === 'number' && Number.isInteger(offsetVal) && offsetVal >= 0 ? offsetVal : -1;
+    if (offset === -1) return fail(`offset must be a non-negative integer, got: ${String(offsetVal)}`);
 
     if (!query) {
-      return ok(JSON.stringify(state.library.duplicateGroups.slice(0, limit)));
+      const page = state.library.duplicateGroups.slice(offset, offset + limit);
+      return ok(JSON.stringify({ total: state.library.duplicateGroups.length, results: page }));
     }
 
     const matchRank = new Map<string, number>();
@@ -327,12 +333,12 @@ export function createHandlers(
       if (!matchRank.has(key)) matchRank.set(key, i);
     }
 
-    const duplicates = state.library.duplicateGroups
+    const allMatches = state.library.duplicateGroups
       .filter((g) => matchRank.has(g.title.toLowerCase()))
-      .sort((a, b) => (matchRank.get(a.title.toLowerCase()) ?? 0) - (matchRank.get(b.title.toLowerCase()) ?? 0))
-      .slice(0, limit);
+      .sort((a, b) => (matchRank.get(a.title.toLowerCase()) ?? 0) - (matchRank.get(b.title.toLowerCase()) ?? 0));
+    const page = allMatches.slice(offset, offset + limit);
 
-    return ok(JSON.stringify(duplicates));
+    return ok(JSON.stringify({ total: allMatches.length, results: page }));
   }
 
   function handleGetStats(): ToolResult {

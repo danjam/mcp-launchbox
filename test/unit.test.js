@@ -1112,10 +1112,11 @@ describe('find_duplicates', () => {
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.equal(parsed.length, 1);
-      assert.equal(parsed[0].title, 'Half-Life 2');
-      assert.deepEqual(parsed[0].platforms, ['Linux', 'Windows']);
-      assert.equal(parsed[0].entries, 2);
+      assert.equal(parsed.total, 1);
+      assert.equal(parsed.results.length, 1);
+      assert.equal(parsed.results[0].title, 'Half-Life 2');
+      assert.deepEqual(parsed.results[0].platforms, ['Linux', 'Windows']);
+      assert.equal(parsed.results[0].entries, 2);
     }
   });
 
@@ -1124,7 +1125,8 @@ describe('find_duplicates', () => {
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.equal(parsed.length, 0);
+      assert.equal(parsed.total, 0);
+      assert.equal(parsed.results.length, 0);
     }
   });
 
@@ -1138,8 +1140,8 @@ describe('find_duplicates', () => {
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.equal(parsed.length, 1);
-      assert.equal(parsed[0].title, 'Half-Life 2');
+      assert.equal(parsed.total, 1);
+      assert.equal(parsed.results[0].title, 'Half-Life 2');
     }
   });
 
@@ -1148,7 +1150,24 @@ describe('find_duplicates', () => {
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.equal(parsed.length, 1);
+      assert.equal(parsed.total, 1);
+    }
+  });
+
+  it('paginates with offset', async () => {
+    const result = await handlers.find_duplicates({ limit: 1, offset: 0 });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.total, 1);
+      assert.equal(parsed.results.length, 1);
+    }
+    const result2 = await handlers.find_duplicates({ limit: 1, offset: 1 });
+    assert.equal(result2.ok, true);
+    if (result2.ok) {
+      const parsed2 = JSON.parse(result2.text);
+      assert.equal(parsed2.total, 1);
+      assert.equal(parsed2.results.length, 0);
     }
   });
 });

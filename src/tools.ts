@@ -12,7 +12,7 @@ export const tools = [
         platform: { type: 'string', description: "Platform (e.g. 'Windows', 'Arcade')" },
         installed: { type: 'boolean', description: 'true = installed only, false = uninstalled only, omit = all' },
         favorite: { type: 'boolean', description: 'true = favorites only, false = non-favorites only, omit = all' },
-        limit: { type: 'integer', description: 'Max results (default 25)' },
+        limit: { type: 'integer', description: 'Max results (default 25, max 100)' },
         exact: {
           type: 'boolean',
           description: 'Exact title match only, no fuzzy search (default false)',
@@ -103,6 +103,7 @@ export const tools = [
       properties: {
         query: { type: 'string', description: 'Optional title filter (fuzzy match)' },
         limit: { type: 'integer', description: 'Max duplicate groups to return (default 25)' },
+        offset: { type: 'integer', description: 'Groups to skip (default 0)' },
       },
     },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },

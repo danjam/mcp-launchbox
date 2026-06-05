@@ -89,7 +89,7 @@ Tool: `search_games`
 | `platform` | string | No | Platform (e.g. 'Windows', 'Arcade') |
 | `installed` | boolean | No | true = installed only, false = uninstalled only, omit = all |
 | `favorite` | boolean | No | true = favorites only, false = non-favorites only, omit = all |
-| `limit` | number | No | Max results (default 25) |
+| `limit` | number | No | Max results (default 25, max 100) |
 | `exact` | boolean | No | Exact title match only, no fuzzy search (default false) |
 
 ### Check Library
@@ -153,6 +153,7 @@ Tool: `find_duplicates`
 |-----------|------|----------|-------------|
 | `query` | string | No | Optional title filter (fuzzy match) |
 | `limit` | number | No | Max duplicate groups to return (default 25) |
+| `offset` | number | No | Groups to skip (default 0) |
 
 ### Random Game
 
