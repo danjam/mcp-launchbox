@@ -30,8 +30,10 @@ export function createHandlers(
   reload: () => Promise<void>,
 ): Record<ToolName, ToolHandler> {
   function handleSearchGames(args: Record<string, unknown>): ToolResult {
-    const query = requireString('query', args.query);
+    let query = requireString('query', args.query);
     if (typeof query !== 'string') return query;
+    query = query.trim();
+    if (query === '') return fail('query is required (non-empty string)');
     const platform = asString(args.platform);
     if (typeof platform === 'object') return platform;
     const limit = parseLimit(args.limit, 25);
@@ -52,10 +54,39 @@ export function createHandlers(
     const titles = args.games;
     if (!Array.isArray(titles) || titles.length === 0 || !titles.every((t) => typeof t === 'string'))
       return fail('games is required (array of strings)');
-    const validTitles: string[] = titles.filter((t) => t.trim() !== '');
-    if (validTitles.length === 0) return fail('games must contain at least one non-empty string');
     const maxTitles = 100;
-    if (validTitles.length > maxTitles) return fail(`Too many titles (${validTitles.length}), max is ${maxTitles}`);
+
+    // Validation pipeline: trim → filter empties → dedupe → truncate
+    const skipped: Record<string, number> = {};
+    const trimmed: string[] = titles.map((t) => t.trim());
+    const afterEmpty: string[] = [];
+    for (const t of trimmed) {
+      if (t === '') {
+        skipped.empty = (skipped.empty ?? 0) + 1;
+      } else {
+        afterEmpty.push(t);
+      }
+    }
+    const seen = new Set<string>();
+    const deduped: string[] = [];
+    for (const t of afterEmpty) {
+      const key = t.toLowerCase();
+      if (seen.has(key)) {
+        skipped.duplicate = (skipped.duplicate ?? 0) + 1;
+      } else {
+        seen.add(key);
+        deduped.push(t);
+      }
+    }
+    let validTitles: string[];
+    if (deduped.length > maxTitles) {
+      skipped.overflow = deduped.length - maxTitles;
+      validTitles = deduped.slice(0, maxTitles);
+    } else {
+      validTitles = deduped;
+    }
+    if (validTitles.length === 0) return fail('games must contain at least one non-empty string');
+
     const platform = asString(args.platform);
     if (typeof platform === 'object') return platform;
     const exact = args.exact === true;
@@ -138,13 +169,10 @@ export function createHandlers(
     });
 
     const owned = results.filter((r) => r.matches.length > 0).length;
+    const summary: Record<string, unknown> = { total: validTitles.length, owned, new: validTitles.length - owned };
+    if (Object.keys(skipped).length > 0) summary.skipped = skipped;
 
-    return ok(
-      JSON.stringify({
-        results,
-        summary: { total: validTitles.length, owned, new: validTitles.length - owned },
-      }),
-    );
+    return ok(JSON.stringify({ results, summary }));
   }
 
   function handleGetGameDetails(args: Record<string, unknown>): ToolResult {
@@ -261,8 +289,9 @@ export function createHandlers(
   }
 
   function handleFindDuplicates(args: Record<string, unknown>): ToolResult {
-    const query = asString(args.query);
+    let query = asString(args.query);
     if (typeof query === 'object') return query;
+    if (query) query = query.trim() || undefined;
     const limit = parseLimit(args.limit, 25);
     if (typeof limit !== 'number') return limit;
 

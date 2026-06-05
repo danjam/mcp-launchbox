@@ -274,6 +274,21 @@ describe('search_games', () => {
     const result = await handlers.search_games({ query: 'test', limit: 0 });
     assert.equal(result.ok, false);
   });
+
+  it('trims whitespace from query', async () => {
+    const result = await handlers.search_games({ query: '  Half-Life  ' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.ok(parsed.results.length > 0);
+      assert.equal(parsed.results[0].title, 'Half-Life 2');
+    }
+  });
+
+  it('rejects whitespace-only query after trimming', async () => {
+    const result = await handlers.search_games({ query: '   ' });
+    assert.equal(result.ok, false);
+  });
 });
 
 describe('get_game_details', () => {
@@ -615,10 +630,16 @@ describe('check_library', () => {
     assert.equal(result.ok, false);
   });
 
-  it('rejects when titles exceed internal cap', async () => {
-    const result = await handlers.check_library({ games: Array.from({ length: 101 }, (_, i) => `Game ${i}`) });
-    assert.equal(result.ok, false);
-    if (!result.ok) assert.match(result.message, /Too many titles/);
+  it('truncates when titles exceed internal cap and reports overflow', async () => {
+    const games = Array.from({ length: 103 }, (_, i) => `Game ${i}`);
+    const result = await handlers.check_library({ games });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.summary.total, 100);
+      assert.equal(parsed.summary.skipped.overflow, 3);
+      assert.equal(parsed.results.length, 100);
+    }
   });
 
   it('rejects empty games array', async () => {
@@ -626,13 +647,14 @@ describe('check_library', () => {
     assert.equal(result.ok, false);
   });
 
-  it('skips empty-string titles and processes valid ones', async () => {
-    const result = await handlers.check_library({ games: ['Half-Life 2', ''] });
+  it('skips empty-string titles and reports in skipped.empty', async () => {
+    const result = await handlers.check_library({ games: ['Half-Life 2', '', '  '] });
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
       assert.equal(parsed.summary.total, 1);
       assert.equal(parsed.summary.owned, 1);
+      assert.equal(parsed.summary.skipped.empty, 2);
     }
   });
 
@@ -697,6 +719,81 @@ describe('check_library', () => {
       const fuzzy = entry.nearMisses.filter((n) => 'confidence' in n);
       assert.ok(fuzzy.length > 0, 'should have fuzzy nearMisses');
       assert.ok(fuzzy.every((n) => n.confidence >= 0.4), 'fuzzy nearMisses should have confidence >= 0.4');
+    }
+  });
+
+  it('deduplicates titles and reports in skipped.duplicate', async () => {
+    const result = await handlers.check_library({ games: ['Half-Life 2', 'Portal', 'Half-Life 2'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.summary.total, 2);
+      assert.equal(parsed.summary.skipped.duplicate, 1);
+      assert.equal(parsed.results.length, 2);
+    }
+  });
+
+  it('reports mixed skips (empties + duplicates)', async () => {
+    const result = await handlers.check_library({ games: ['Half-Life 2', '', 'Portal', 'half-life 2', '  '] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.summary.total, 2);
+      assert.equal(parsed.summary.skipped.empty, 2);
+      assert.equal(parsed.summary.skipped.duplicate, 1);
+    }
+  });
+
+  it('omits skipped from summary when no titles were skipped', async () => {
+    const result = await handlers.check_library({ games: ['Half-Life 2', 'Portal'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.summary.skipped, undefined);
+    }
+  });
+
+  it('processes one title when all are duplicates of it', async () => {
+    const result = await handlers.check_library({ games: ['Portal', 'PORTAL', 'portal'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.summary.total, 1);
+      assert.equal(parsed.summary.skipped.duplicate, 2);
+      assert.equal(parsed.results.length, 1);
+      assert.equal(parsed.results[0].query, 'Portal');
+    }
+  });
+
+  it('trims whitespace from titles before matching', async () => {
+    const result = await handlers.check_library({ games: ['  Half-Life 2  '] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.results[0].query, 'Half-Life 2');
+      assert.equal(parsed.results[0].matches.length, 2);
+    }
+  });
+
+  it('dedup is case-insensitive', async () => {
+    const result = await handlers.check_library({ games: ['Doom', 'doom', 'DOOM'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.summary.total, 1);
+      assert.equal(parsed.summary.skipped.duplicate, 2);
+      assert.equal(parsed.results[0].query, 'Doom');
+    }
+  });
+
+  it('dedup is NOT normalisation-based (Pac-Man and Pac Man both processed)', async () => {
+    const result = await handlers.check_library({ games: ['Pac-Man', 'Pac Man'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.summary.total, 2);
+      assert.equal(parsed.summary.skipped, undefined);
+      assert.equal(parsed.results.length, 2);
     }
   });
 
@@ -801,6 +898,25 @@ describe('find_duplicates', () => {
   it('rejects non-string query', async () => {
     const result = await handlers.find_duplicates({ query: 999 });
     assert.equal(result.ok, false);
+  });
+
+  it('trims whitespace from query', async () => {
+    const result = await handlers.find_duplicates({ query: '  Half-Life  ' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.length, 1);
+      assert.equal(parsed[0].title, 'Half-Life 2');
+    }
+  });
+
+  it('treats whitespace-only query as no query (returns all duplicates)', async () => {
+    const result = await handlers.find_duplicates({ query: '   ' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.length, 1);
+    }
   });
 });
 
