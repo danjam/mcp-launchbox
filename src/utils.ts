@@ -46,6 +46,12 @@ export function fuseConfidence(score: number): number {
   return Math.round((1 - score) * 100) / 100;
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: typed buffers trigger noUncheckedIndexedAccess in the hot loop
+let levPrev: any[] = [];
+// biome-ignore lint/suspicious/noExplicitAny: see above
+let levCurr: any[] = [];
+let levBufSize = 0;
+
 // Levenshtein with an early-out cap, if the running edit distance exceeds
 // `cap`, returns `cap + 1` so callers can short-circuit. Used by the
 // single-token guard and token match confidence below; we never need the
@@ -56,16 +62,23 @@ export function levenshteinAtMost(a: string, b: string, cap: number): number {
   const bLen = b.length;
   if (aLen === 0) return bLen;
   if (bLen === 0) return aLen;
-  let prev = new Array(bLen + 1);
-  let curr = new Array(bLen + 1);
+  const needed = bLen + 1;
+  if (needed > levBufSize) {
+    levBufSize = needed * 2;
+    levPrev = new Array(levBufSize);
+    levCurr = new Array(levBufSize);
+  }
+  let prev = levPrev;
+  let curr = levCurr;
   for (let j = 0; j <= bLen; j++) prev[j] = j;
   for (let i = 1; i <= aLen; i++) {
     curr[0] = i;
-    let rowMin = curr[0];
+    let rowMin = i;
     for (let j = 1; j <= bLen; j++) {
       const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
-      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
-      if (curr[j] < rowMin) rowMin = curr[j];
+      const val = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+      curr[j] = val;
+      if (val < rowMin) rowMin = val;
     }
     if (rowMin > cap) return cap + 1;
     [prev, curr] = [curr, prev];
@@ -139,12 +152,4 @@ export function compactListResult(game: Game): CompactListGame {
     dateAdded: emptyToNull(game.DateAdded),
     lastPlayedDate: emptyToNull(game.LastPlayedDate),
   };
-}
-
-export function sortedPlatformCounts(games: readonly Game[]): { platform: string; count: number }[] {
-  const counts = new Map<string, number>();
-  for (const g of games) {
-    counts.set(g.Platform, (counts.get(g.Platform) ?? 0) + 1);
-  }
-  return [...counts.entries()].map(([platform, count]) => ({ platform, count })).sort((a, b) => b.count - a.count);
 }

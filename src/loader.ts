@@ -148,12 +148,7 @@ export async function loadGames(platformsPath: string): Promise<{
     for (const raw of additionalApps) {
       const entry = extractVersion(raw);
       if (!entry) continue;
-      let list = versionsByGameId.get(entry.gameId);
-      if (!list) {
-        list = [];
-        versionsByGameId.set(entry.gameId, list);
-      }
-      list.push(entry.version);
+      pushToMapList(versionsByGameId, entry.gameId, entry.version);
     }
     for (const raw of rawGames) {
       const game = extractGame(raw);
@@ -191,6 +186,15 @@ export async function loadGames(platformsPath: string): Promise<{
 
   stringCache.clear();
   return { gamesById, games, versionsByGameId };
+}
+
+function pushToMapList<K, V>(map: Map<K, V[]>, key: K, value: V): void {
+  let list = map.get(key);
+  if (!list) {
+    list = [];
+    map.set(key, list);
+  }
+  list.push(value);
 }
 
 const defaultGetFn = Fuse.config.getFn;
@@ -233,30 +237,9 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
   const statusMap = new Map<string, number>();
 
   for (const g of games) {
-    const lower = g.Title.toLowerCase();
-    let titleList = gamesByTitle.get(lower);
-    if (!titleList) {
-      titleList = [];
-      gamesByTitle.set(lower, titleList);
-    }
-    titleList.push(g);
-
-    const normalised = normaliseTitle(g.Title);
-    let normList = gamesByNormalisedTitle.get(normalised);
-    if (!normList) {
-      normList = [];
-      gamesByNormalisedTitle.set(normalised, normList);
-    }
-    normList.push(g);
-
-    const platKey = g.Platform.toLowerCase();
-    let platList = byPlatform.get(platKey);
-    if (!platList) {
-      platList = [];
-      byPlatform.set(platKey, platList);
-    }
-    platList.push(g);
-
+    pushToMapList(gamesByTitle, g.Title.toLowerCase(), g);
+    pushToMapList(gamesByNormalisedTitle, normaliseTitle(g.Title), g);
+    pushToMapList(byPlatform, g.Platform.toLowerCase(), g);
     platformCountMap.set(g.Platform, (platformCountMap.get(g.Platform) ?? 0) + 1);
     const status = g.Progress || 'No Status';
     statusMap.set(status, (statusMap.get(status) ?? 0) + 1);
@@ -272,7 +255,7 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
   const platformCounts = [...platformCountMap.entries()]
     .map(([platform, count]) => ({ platform, count }))
     .sort((a, b) => b.count - a.count);
-  const duplicateGroups = buildDuplicateGroups(games);
+  const duplicateGroups = buildDuplicateGroups(gamesByTitle);
   const statusCounts = [...statusMap.entries()]
     .map(([status, count]) => ({ status, count }))
     .sort((a, b) => b.count - a.count);
@@ -286,6 +269,7 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
     versionsByGameId,
     fuse,
     fuseTitleOnly,
+    byPlatform,
     platformFuse,
     platformFuseTitleOnly,
     platformCounts,
@@ -297,22 +281,14 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
 
 export type DuplicateGroup = { title: string; platforms: string[]; entries: number };
 
-function buildDuplicateGroups(games: readonly Game[]): DuplicateGroup[] {
-  const groups = new Map<string, { title: string; platforms: Set<string>; entries: number }>();
-  for (const g of games) {
-    const key = g.Title.toLowerCase();
-    let group = groups.get(key);
-    if (!group) {
-      group = { title: g.Title, platforms: new Set(), entries: 0 };
-      groups.set(key, group);
-    }
-    group.platforms.add(g.Platform);
-    group.entries++;
+function buildDuplicateGroups(gamesByTitle: ReadonlyMap<string, readonly Game[]>): DuplicateGroup[] {
+  const groups: DuplicateGroup[] = [];
+  for (const titleGames of gamesByTitle.values()) {
+    if (titleGames.length < 2) continue;
+    const platforms = [...new Set(titleGames.map((g) => g.Platform))].sort();
+    groups.push({ title: titleGames[0]?.Title ?? '', platforms, entries: titleGames.length });
   }
-  return [...groups.values()]
-    .filter((g) => g.entries >= 2)
-    .map((g) => ({ title: g.title, platforms: [...g.platforms].sort(), entries: g.entries }))
-    .sort((a, b) => b.entries - a.entries);
+  return groups.sort((a, b) => b.entries - a.entries);
 }
 
 export interface Library {
@@ -323,6 +299,7 @@ export interface Library {
   readonly versionsByGameId: ReadonlyMap<string, readonly GameVersion[]>;
   readonly fuse: Fuse<Game>;
   readonly fuseTitleOnly: Fuse<Game>;
+  readonly byPlatform: ReadonlyMap<string, readonly Game[]>;
   readonly platformFuse: ReadonlyMap<string, Fuse<Game>>;
   readonly platformFuseTitleOnly: ReadonlyMap<string, Fuse<Game>>;
   readonly platformCounts: readonly { platform: string; count: number }[];

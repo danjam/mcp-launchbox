@@ -8,7 +8,7 @@ import { buildToolDefinitions } from '../dist/tools.js';
 import {
   normaliseTitle, parseLimit, asString, compactResult, fail, fuseConfidence, ok,
   tokenMatchConfidence,
-  requireString, sortedPlatformCounts,
+  requireString,
 } from '../dist/utils.js';
 
 
@@ -261,7 +261,11 @@ function mockLibrary() {
     platformFuseTitleOnly.set(key, new Fuse(pGames, FUSE_TITLE_ONLY_OPTIONS));
   }
 
-  const platformCounts = sortedPlatformCounts(games);
+  const platformCountMap = new Map();
+  for (const g of games) platformCountMap.set(g.Platform, (platformCountMap.get(g.Platform) ?? 0) + 1);
+  const platformCounts = [...platformCountMap.entries()]
+    .map(([platform, count]) => ({ platform, count }))
+    .sort((a, b) => b.count - a.count);
   const dupMap = new Map();
   for (const g of games) {
     const key = g.Title.toLowerCase();
@@ -285,7 +289,7 @@ function mockLibrary() {
   const distinctStatuses = statusCounts.filter((s) => s.status !== 'No Status').map((s) => s.status);
   return {
     gamesById, gamesByTitle, gamesByNormalisedTitle, games, versionsByGameId: new Map(),
-    fuse, fuseTitleOnly, platformFuse, platformFuseTitleOnly, platformCounts, duplicateGroups, statusCounts, distinctStatuses,
+    fuse, fuseTitleOnly, byPlatform, platformFuse, platformFuseTitleOnly, platformCounts, duplicateGroups, statusCounts, distinctStatuses,
   };
 }
 
@@ -1090,8 +1094,8 @@ describe('check_library', () => {
     const fuseTitleOnly = new Fuse(games, FUSE_TITLE_ONLY_OPTIONS);
     const lib = {
       gamesById, gamesByTitle, gamesByNormalisedTitle, games, versionsByGameId: new Map(),
-      fuse, fuseTitleOnly, platformFuse: new Map(), platformFuseTitleOnly: new Map(),
-      platformCounts: sortedPlatformCounts(games), duplicateGroups: [], statusCounts: [], distinctStatuses: [],
+      fuse, fuseTitleOnly, byPlatform: new Map(), platformFuse: new Map(), platformFuseTitleOnly: new Map(),
+      platformCounts: [], duplicateGroups: [], statusCounts: [], distinctStatuses: [],
     };
     const state = { library: lib };
     const handlers = createHandlers(state, async () => {});
@@ -1495,21 +1499,6 @@ describe('utils', () => {
       const result = compactResult(game, 1.0, undefined);
       assert.equal(result.exactMatch, undefined);
       assert.ok(!('exactMatch' in result));
-    });
-  });
-
-  describe('sortedPlatformCounts', () => {
-    it('returns empty array for empty input', () => {
-      assert.deepEqual(sortedPlatformCounts([]), []);
-    });
-
-    it('counts and sorts platforms descending', () => {
-      const games = mockGames();
-      const result = sortedPlatformCounts(games);
-      assert.equal(result[0].platform, 'Windows');
-      assert.equal(result[0].count, 6);
-      assert.equal(result[1].platform, 'Linux');
-      assert.equal(result[1].count, 1);
     });
   });
 });

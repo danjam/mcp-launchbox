@@ -263,9 +263,9 @@ export function createHandlers(
     }
 
     const { installed, favorite } = args;
+    const source = platform ? (state.library.byPlatform.get(platform) ?? []) : state.library.games;
     const filtered: Game[] = [];
-    for (const g of state.library.games) {
-      if (platform && !matchesPlatform(g.Platform, platform)) continue;
+    for (const g of source) {
       if (installed === true && !g.Installed) continue;
       if (installed === false && g.Installed) continue;
       if (favorite === true && !g.Favorite) continue;
@@ -293,9 +293,7 @@ export function createHandlers(
 
     let sorted: readonly Game[];
     if (sortKey === 'title') {
-      const withKey = filtered.map((g) => ({ g, k: g.Title.toLowerCase() }));
-      withKey.sort((a, b) => a.k.localeCompare(b.k));
-      sorted = withKey.map((x) => x.g);
+      sorted = [...filtered].sort((a, b) => a.Title.localeCompare(b.Title, undefined, { sensitivity: 'base' }));
     } else {
       sorted = [...filtered].sort((a, b) => {
         if (sortKey === 'playTime') return b.PlayTime - a.PlayTime;
