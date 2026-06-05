@@ -4,7 +4,7 @@ export const tools = [
   {
     name: 'search_games',
     description:
-      'Search the LaunchBox game library by title and series. Confidence scale: 1.0 = perfect, ≥0.85 = very likely, ≥0.65 = probable, <0.65 = speculative. Use id from results to call get_game_details for full metadata.',
+      'Search the library by title and series. Confidence: 1.0 = perfect, ≥0.85 = very likely, ≥0.65 = probable, <0.65 = speculative. Use id with get_game_details.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -20,7 +20,7 @@ export const tools = [
   {
     name: 'check_library',
     description:
-      'Check which games from a list are already in the library. Only matches with confidence ≥0.85 are included to avoid false positives. When matches is empty, nearMisses shows up to 5 close candidates for diagnostics. A nearMiss with confidence 0 means a shorter version of the title exists in the library (e.g. "Behind the Frame" for query "Behind the Frame: The Finest Scenery") — search the head title (everything before the colon/subtitle) to confirm ownership. Results do not include storefront or version info — use get_game_details for that. Designed for bundle duplicate checking — replaces calling search_games per title. Omit platform to check across all platforms (recommended for bundles).',
+      'Batch-check which games from a list are in the library — use instead of calling search_games per title. Only matches with confidence ≥0.85 count. When no match is found, nearMisses lists up to 5 candidates — confidence 0 means a shorter version of the title exists (search the head title to confirm). Results exclude storefront/version info — use get_game_details for that. Omit platform to check across all platforms (recommended for bundles).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -41,7 +41,7 @@ export const tools = [
   {
     name: 'get_game_details',
     description:
-      'Get full details for a specific game by ID. Rating scales: communityStarRating and starRating are both 0–5. progress is a free-form string from LaunchBox (e.g. "Not Started / Unplayed", "Completed"). versions lists alternate versions when present (e.g. storefronts like Steam/GOG/Epic, ROM regions, or platform ports) — source only reflects the import origin of the primary entry, not all owned storefronts.',
+      "Get details for a game by ID. starRating and communityStarRating are 0–5, progress is free-form. versions lists storefronts, regions, and ports — source only reflects the primary entry's import origin.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -54,8 +54,7 @@ export const tools = [
   },
   {
     name: 'list_platforms',
-    description:
-      'List all platforms in the library with their game counts. Platform names returned here are the exact values to use for the platform filter in search_games.',
+    description: 'List all platforms with game counts. Names are the exact values for platform filters in other tools.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -65,7 +64,7 @@ export const tools = [
   {
     name: 'list_games',
     description:
-      'List and filter games in the library. Unlike search_games, this does not do fuzzy matching — it returns games matching the specified filters, sorted and paginated. Use for browsing by platform, installed status, or favorites, and for recency queries like "what did I add this week."',
+      'List games sorted and paginated — unlike search_games, no fuzzy matching. Browse by platform, installed status, or favorites; recency queries like "what did I add this week."',
     inputSchema: {
       type: 'object',
       properties: {
@@ -104,7 +103,7 @@ export const tools = [
   {
     name: 'get_stats',
     description:
-      'Get library summary statistics: total games, total platforms, top 10 platforms by game count, and statusCounts (all distinct progress values with counts, sorted descending). Use statusCounts to discover what free-form status values exist in the library.',
+      'Library summary: total games, total platforms, top 10 platforms by game count, and statusCounts (all distinct progress values with counts, sorted descending). Use statusCounts to discover available status filter values.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -114,7 +113,7 @@ export const tools = [
   {
     name: 'random_game',
     description:
-      'Pick a random game from the library, optionally filtered. Use for "what should I play?" or "surprise me" queries. Returns a single game with the same shape as list_games results, plus matchPool (how many games matched the filters).',
+      'Pick a random game, optionally filtered. For "what should I play?" or "surprise me". Returns one game (same shape as list_games) or null, plus matchPool (total games matching filters).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -132,7 +131,7 @@ export const tools = [
   {
     name: 'reload_library',
     description:
-      'Reload the game library from disk. Use after adding or removing games in LaunchBox. Returns game/platform counts plus added/removed arrays showing what changed since the previous load (id, title, platform for each).',
+      'Reload the library after adding or removing games in LaunchBox. Returns game/platform counts plus added/removed arrays (id, title, platform).',
     inputSchema: {
       type: 'object',
       properties: {},
