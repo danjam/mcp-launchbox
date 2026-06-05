@@ -67,7 +67,7 @@ export function createHandlers(
       const confidence = Math.round(rawConfidence * penalty * 100) / 100;
       const isExactMatch = normalisedQuery === titleNorm;
       return compactResult(r.item, confidence, isExactMatch || undefined);
-    });
+    }).filter((r) => r.confidence !== undefined && r.confidence > 0);
 
     return ok(JSON.stringify({ results: items }));
   }
