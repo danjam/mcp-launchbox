@@ -7,7 +7,7 @@ import { FUSE_OPTIONS, FUSE_TITLE_ONLY_OPTIONS } from '../dist/loader.js';
 import { buildToolDefinitions } from '../dist/tools.js';
 import {
   normaliseTitle, parseLimit, asString, compactResult, fail, fuseConfidence, ok,
-  passesSingleTokenTitleGuard,
+  passesTokenBoundaryGuard,
   requireString, sortedPlatformCounts,
 } from '../dist/utils.js';
 
@@ -579,7 +579,10 @@ describe('check_library', () => {
   });
 
   it('returns nearMisses for close but below-threshold results', async () => {
-    const result = await handlers.check_library({ games: ['Half-Life 3'] });
+    // "Portaler" fuzzy-matches "Portal" with confidence ~0.75 (below 0.85
+    // threshold but above 0.40 near-miss floor), and passes the token
+    // boundary guard (Levenshtein 2, tolerance floor(8/4)=2).
+    const result = await handlers.check_library({ games: ['Portaler'] });
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
@@ -707,10 +710,10 @@ describe('check_library', () => {
     }
   });
 
-  it('includes both fuzzy nearMisses and prefix hits when both exist', async () => {
-    // "Half-Life 3" should get fuzzy nearMisses for "Half-Life 2" (confidence-based)
-    // but no prefix hit because "Half-Life 3" tokens don't match a shorter title exactly
-    const result = await handlers.check_library({ games: ['Half-Life 3'] });
+  it('does not run prefix fallback when fuzzy nearMisses exist', async () => {
+    // "Portaler" fuzzy-matches "Portal" as a near miss (confidence ~0.75),
+    // so the prefix fallback should not run.
+    const result = await handlers.check_library({ games: ['Portaler'] });
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
@@ -1103,41 +1106,71 @@ describe('utils', () => {
     });
   });
 
-  // Regression for #2: a single-token query like "gord" must not match
-  // "flash gordon" (mid-token substring of the second token).
-  describe('passesSingleTokenTitleGuard', () => {
+  describe('passesTokenBoundaryGuard', () => {
+    // --- Single-token cases (regression for #2) ---
     it('rejects single-token query that is only a mid-token substring (#2)', () => {
-      assert.equal(passesSingleTokenTitleGuard('gord', 'flash gordon'), false);
+      assert.equal(passesTokenBoundaryGuard('gord', 'flash gordon'), false);
     });
 
     it('accepts single-token query that matches a complete title token', () => {
-      assert.equal(passesSingleTokenTitleGuard('halo', 'halo 2'), true);
+      assert.equal(passesTokenBoundaryGuard('halo', 'halo 2'), true);
     });
 
-    it('accepts a small typo within the per-length tolerance (typos via Bitap stay)', () => {
-      // 5-char query vs a 5-char title token, single-char substitution.
-      // tolerance = floor(5/4) = 1, so this passes.
-      assert.equal(passesSingleTokenTitleGuard('starss', 'starsx'), true);
+    it('accepts a small typo within the per-length tolerance', () => {
+      // 6-char query vs a 6-char title token, single-char substitution.
+      // tolerance = floor(6/4) = 1, so this passes.
+      assert.equal(passesTokenBoundaryGuard('starss', 'starsx'), true);
     });
 
     it('rejects a single-token query when no title token is close enough', () => {
-      assert.equal(passesSingleTokenTitleGuard('zzzzz', 'half-life 2'), false);
-    });
-
-    it('passes through multi-token queries unchanged (multi-token gets IDF)', () => {
-      assert.equal(passesSingleTokenTitleGuard('flash gord', 'flash gordon'), true);
-      assert.equal(passesSingleTokenTitleGuard('flash gord', 'half-life 2'), true);
+      assert.equal(passesTokenBoundaryGuard('zzzzz', 'half life 2'), false);
     });
 
     it('handles short queries strictly (3-char query: exact only)', () => {
-      assert.equal(passesSingleTokenTitleGuard('rim', 'rimworld'), false);
-      assert.equal(passesSingleTokenTitleGuard('rim', 'rim runner'), true);
+      assert.equal(passesTokenBoundaryGuard('rim', 'rimworld'), false);
+      assert.equal(passesTokenBoundaryGuard('rim', 'rim runner'), true);
     });
 
     it('treats title hyphens as token separators (normalisation contract)', () => {
-      // `normaliseTitle('half-life 2')` produces `'half life 2'`, so the
-      // guard sees three tokens and `half` matches as a whole token.
-      assert.equal(passesSingleTokenTitleGuard('half', 'half life 2'), true);
+      assert.equal(passesTokenBoundaryGuard('half', 'half life 2'), true);
+    });
+
+    // --- Multi-token: token absorption false positives ---
+    it('rejects "halo 2" vs "halo 2600" (token absorption)', () => {
+      assert.equal(passesTokenBoundaryGuard('halo 2', 'halo 2600'), false);
+    });
+
+    it('rejects "grand theft auto v" vs "grand theft auto vice city" (token absorption)', () => {
+      assert.equal(passesTokenBoundaryGuard('grand theft auto v', 'grand theft auto vice city'), false);
+    });
+
+    it('rejects "street fighter 2" vs "street fighter 2010 the final fight" (token absorption)', () => {
+      assert.equal(passesTokenBoundaryGuard('street fighter 2', 'street fighter 2010 the final fight'), false);
+    });
+
+    // --- Multi-token: legitimate matches that must still pass ---
+    it('accepts "fallout 3" vs "fallout 3" (exact match)', () => {
+      assert.equal(passesTokenBoundaryGuard('fallout 3', 'fallout 3'), true);
+    });
+
+    it('accepts "the witcher 3" vs "the witcher 3 wild hunt" (all query tokens match)', () => {
+      assert.equal(passesTokenBoundaryGuard('the witcher 3', 'the witcher 3 wild hunt'), true);
+    });
+
+    it('accepts "pac man" vs "pac man" (exact match)', () => {
+      assert.equal(passesTokenBoundaryGuard('pac man', 'pac man'), true);
+    });
+
+    it('accepts "half life 2" vs "half life 2" (exact match)', () => {
+      assert.equal(passesTokenBoundaryGuard('half life 2', 'half life 2'), true);
+    });
+
+    it('accepts multi-token query when all tokens have whole-token matches', () => {
+      assert.equal(passesTokenBoundaryGuard('flash gordon', 'flash gordon'), true);
+    });
+
+    it('rejects multi-token query when a token has no whole-token match', () => {
+      assert.equal(passesTokenBoundaryGuard('flash gord', 'flash gordon'), false);
     });
   });
 

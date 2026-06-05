@@ -11,7 +11,7 @@ import {
   normaliseTitle,
   ok,
   parseLimit,
-  passesSingleTokenTitleGuard,
+  passesTokenBoundaryGuard,
   requireString,
 } from './utils.js';
 
@@ -124,15 +124,12 @@ export function createHandlers(
 
       for (const r of fuzzyResults) {
         const confidence = fuseConfidence(r.score ?? 0);
-        // Issue #2: a single-token query (`"Gord"`) should not trigger an
-        // owned-confidence match against a mid-token substring of a longer
-        // title (`"Flash Gordon"`). With `ignoreLocation: true` Fuse scores
-        // the substring 0.99 even though the user clearly hasn't typed
-        // "Flash Gordon". Drop matches whose title has no whole-token
-        // (Levenshtein-tolerant) hit for the query token. Multi-token
-        // queries already get IDF differentiation and are unaffected.
+        // Token-boundary guard: every query token must match a whole token
+        // in the title (Levenshtein-tolerant). Prevents short differentiating
+        // tokens like "2" in "Halo 2" being absorbed into longer tokens like
+        // "2600" in "Halo 2600", which Fuse scores as near-perfect.
         const titleNorm = normaliseTitle(r.item.Title);
-        if (!passesSingleTokenTitleGuard(normalisedQuery, titleNorm)) continue;
+        if (!passesTokenBoundaryGuard(normalisedQuery, titleNorm)) continue;
         if (confidence >= CONFIDENCE_THRESHOLD) {
           matches.push(compactResult(r.item, confidence));
         } else if (confidence >= NEAR_MISS_FLOOR && nearMisses.length < 5) {

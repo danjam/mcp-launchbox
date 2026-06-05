@@ -67,29 +67,32 @@ function levenshteinAtMost(a: string, b: string, cap: number): number {
   return prev[bLen];
 }
 
-// Single-token-query token-boundary guard (issue #2): a one-token query
-// like "Gord" must match a complete token in the title (e.g. "Halo" in
-// "Halo 2") rather than a mid-token substring (e.g. "Gord" inside
-// "Gordon" of "Flash Gordon"). Multi-token queries are unaffected, they
-// already benefit from BM25 IDF differentiation.
+// Token-boundary guard: every query token must have a close whole-token
+// Levenshtein match against the title tokens. Prevents short differentiating
+// tokens (e.g. "2" in "Halo 2") being absorbed into longer title tokens
+// (e.g. "2600" in "Halo 2600") which Fuse.js scores as near-perfect.
 //
 // Both `query` and `title` are expected to be normalised (see
 // `normaliseTitle`). Typos are still allowed via a small Levenshtein
-// tolerance proportional to query length, so "halo" matches "halo" and
-// "halp" still matches "halo" but "gord" does not match the "gordon"
-// token.
-export function passesSingleTokenTitleGuard(query: string, title: string): boolean {
+// tolerance proportional to token length: `floor(length / 4)` for tokens
+// >= 5 chars, 0 for shorter tokens.
+export function passesTokenBoundaryGuard(query: string, title: string): boolean {
   const queryTokens = query.split(/\s+/).filter(Boolean);
-  if (queryTokens.length !== 1) return true;
-  const q = queryTokens[0];
-  if (q === undefined) return true;
-  // Allow ~1 typo per 4 characters, bounded so 3-char queries are exact-ish.
-  const tolerance = q.length >= 5 ? Math.floor(q.length / 4) : 0;
+  if (queryTokens.length === 0) return true;
   const titleTokens = title.split(/\s+/).filter(Boolean);
-  for (const t of titleTokens) {
-    if (levenshteinAtMost(q, t, tolerance) <= tolerance) return true;
+  for (const q of queryTokens) {
+    // Allow ~1 typo per 4 characters, bounded so 3-char queries are exact-ish.
+    const tolerance = q.length >= 5 ? Math.floor(q.length / 4) : 0;
+    let matched = false;
+    for (const t of titleTokens) {
+      if (levenshteinAtMost(q, t, tolerance) <= tolerance) {
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) return false;
   }
-  return false;
+  return true;
 }
 
 export function emptyToNull(val: string): string | null {
