@@ -150,10 +150,13 @@ export function createHandlers(
 
       const MAX_MATCHES = 25;
       for (const r of fuzzyResults) {
-        const confidence = fuseConfidence(r.score ?? 0);
-        if (confidence < NEAR_MISS_FLOOR) continue;
+        const rawConfidence = fuseConfidence(r.score ?? 0);
+        if (rawConfidence < NEAR_MISS_FLOOR) continue;
         const titleNorm = normaliseTitle(r.item.Title);
-        if (confidence >= CONFIDENCE_THRESHOLD && passesTokenBoundaryGuard(normalisedQuery, titleNorm)) {
+        const penalty = tokenMatchConfidence(normalisedQuery, titleNorm);
+        const confidence = Math.round(rawConfidence * penalty * 100) / 100;
+        if (confidence < NEAR_MISS_FLOOR) continue;
+        if (rawConfidence >= CONFIDENCE_THRESHOLD && passesTokenBoundaryGuard(normalisedQuery, titleNorm)) {
           if (matches.length < MAX_MATCHES) matches.push(compactResult(r.item, confidence));
         } else if (nearMisses.length < 5) {
           nearMisses.push({ title: r.item.Title, platform: r.item.Platform, confidence });
