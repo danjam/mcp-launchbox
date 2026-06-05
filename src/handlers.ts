@@ -3,6 +3,7 @@ import type { ToolName } from './tools.js';
 import type { Game, ToolHandler, ToolResult } from './types.js';
 import {
   asString,
+  compactListResult,
   compactResult,
   emptyToNull,
   fail,
@@ -16,8 +17,8 @@ import {
   tokenMatchConfidence,
 } from './utils.js';
 
-function matchesPlatform(gamePlatform: string, filter: string): boolean {
-  return gamePlatform.toLowerCase() === filter.toLowerCase();
+function matchesPlatform(gamePlatform: string, filterLower: string): boolean {
+  return gamePlatform.toLowerCase() === filterLower;
 }
 
 export function createHandlers(
@@ -35,8 +36,9 @@ export function createHandlers(
     if (typeof query !== 'string') return query;
     query = query.trim();
     if (query === '') return fail('query is required (non-empty string)');
-    const platform = asString(args.platform);
-    if (typeof platform === 'object') return platform;
+    const rawPlatform = asString(args.platform);
+    if (typeof rawPlatform === 'object') return rawPlatform;
+    const platform = rawPlatform?.toLowerCase();
     const rawLimit = parseLimit(args.limit, 25);
     if (typeof rawLimit !== 'number') return rawLimit;
     const limit = Math.min(rawLimit, 100);
@@ -54,24 +56,22 @@ export function createHandlers(
       return ok(JSON.stringify({ results: items }));
     }
 
-    const index = platform
-      ? (state.library.platformFuse.get(platform.toLowerCase()) ?? state.library.fuse)
-      : state.library.fuse;
+    const index = platform ? (state.library.platformFuse.get(platform) ?? state.library.fuse) : state.library.fuse;
     const normalisedQuery = normaliseTitle(query);
     const results = index.search(normalisedQuery);
 
-    const filtered = results.filter((r) => matchesFilters(r.item));
-    const items = filtered
-      .slice(0, limit)
-      .map((r) => {
-        const rawConfidence = fuseConfidence(r.score ?? 0);
-        const titleNorm = normaliseTitle(r.item.Title);
-        const penalty = tokenMatchConfidence(normalisedQuery, titleNorm);
-        const confidence = Math.round(rawConfidence * penalty * 100) / 100;
-        const isExactMatch = normalisedQuery === titleNorm;
-        return compactResult(r.item, confidence, isExactMatch || undefined);
-      })
-      .filter((r) => r.confidence !== undefined && r.confidence > 0);
+    const items: ReturnType<typeof compactResult>[] = [];
+    for (const r of results) {
+      if (items.length >= limit) break;
+      if (!matchesFilters(r.item)) continue;
+      const rawConfidence = fuseConfidence(r.score ?? 0);
+      const titleNorm = normaliseTitle(r.item.Title);
+      const penalty = tokenMatchConfidence(normalisedQuery, titleNorm);
+      const confidence = Math.round(rawConfidence * penalty * 100) / 100;
+      if (confidence <= 0) continue;
+      const isExactMatch = normalisedQuery === titleNorm;
+      items.push(compactResult(r.item, confidence, isExactMatch || undefined));
+    }
 
     return ok(JSON.stringify({ results: items }));
   }
@@ -113,8 +113,9 @@ export function createHandlers(
     }
     if (validTitles.length === 0) return fail('games must contain at least one non-empty string');
 
-    const platform = asString(args.platform);
-    if (typeof platform === 'object') return platform;
+    const rawPlatform = asString(args.platform);
+    if (typeof rawPlatform === 'object') return rawPlatform;
+    const platform = rawPlatform?.toLowerCase();
     const exact = args.exact === true;
     // High threshold, check_library is for bundle duplicate checking, so
     // false positives (claiming you own a game you don't) are worse than misses
@@ -139,7 +140,7 @@ export function createHandlers(
 
       // Slow path: fuzzy search (title only)
       const titleIndex = platform
-        ? (state.library.platformFuseTitleOnly.get(platform.toLowerCase()) ?? state.library.fuseTitleOnly)
+        ? (state.library.platformFuseTitleOnly.get(platform) ?? state.library.fuseTitleOnly)
         : state.library.fuseTitleOnly;
       const normalisedQuery = normaliseTitle(query);
       const fuzzyResults = titleIndex.search(normalisedQuery);
@@ -242,8 +243,9 @@ export function createHandlers(
   }
 
   function applyFilters(args: Record<string, unknown>): readonly Game[] | ToolResult {
-    const platform = asString(args.platform);
-    if (typeof platform === 'object') return platform;
+    const rawPlatform = asString(args.platform);
+    if (typeof rawPlatform === 'object') return rawPlatform;
+    const platform = rawPlatform?.toLowerCase();
 
     let statusFilter: string[] | undefined;
     if (args.status !== undefined && args.status !== null) {
@@ -260,13 +262,17 @@ export function createHandlers(
       }
     }
 
-    let filtered: readonly Game[] = state.library.games;
-    if (platform) filtered = filtered.filter((g) => matchesPlatform(g.Platform, platform));
-    if (args.installed === true) filtered = filtered.filter((g) => g.Installed);
-    if (args.installed === false) filtered = filtered.filter((g) => !g.Installed);
-    if (args.favorite === true) filtered = filtered.filter((g) => g.Favorite);
-    if (args.favorite === false) filtered = filtered.filter((g) => !g.Favorite);
-    if (statusFilter) filtered = filtered.filter((g) => statusFilter.includes(g.Progress));
+    const { installed, favorite } = args;
+    const filtered: Game[] = [];
+    for (const g of state.library.games) {
+      if (platform && !matchesPlatform(g.Platform, platform)) continue;
+      if (installed === true && !g.Installed) continue;
+      if (installed === false && g.Installed) continue;
+      if (favorite === true && !g.Favorite) continue;
+      if (favorite === false && g.Favorite) continue;
+      if (statusFilter && !statusFilter.includes(g.Progress)) continue;
+      filtered.push(g);
+    }
     return filtered;
   }
 
@@ -285,25 +291,21 @@ export function createHandlers(
     const filtered = applyFilters(args);
     if ('ok' in filtered) return filtered;
 
-    const sorted = [...filtered].sort((a, b) => {
-      switch (sortKey) {
-        case 'dateAdded':
-          return (b.DateAdded || '').localeCompare(a.DateAdded || '');
-        case 'lastPlayedDate':
-          return (b.LastPlayedDate || '').localeCompare(a.LastPlayedDate || '');
-        case 'playTime':
-          return b.PlayTime - a.PlayTime;
-        default:
-          return a.Title.toLowerCase().localeCompare(b.Title.toLowerCase());
-      }
-    });
+    let sorted: readonly Game[];
+    if (sortKey === 'title') {
+      const withKey = filtered.map((g) => ({ g, k: g.Title.toLowerCase() }));
+      withKey.sort((a, b) => a.k.localeCompare(b.k));
+      sorted = withKey.map((x) => x.g);
+    } else {
+      sorted = [...filtered].sort((a, b) => {
+        if (sortKey === 'playTime') return b.PlayTime - a.PlayTime;
+        const field = sortKey === 'dateAdded' ? 'DateAdded' : 'LastPlayedDate';
+        return (b[field] || '').localeCompare(a[field] || '');
+      });
+    }
 
     const page = sorted.slice(offset, offset + limit);
-    const items = page.map((g) => ({
-      ...compactResult(g),
-      dateAdded: emptyToNull(g.DateAdded),
-      lastPlayedDate: emptyToNull(g.LastPlayedDate),
-    }));
+    const items = page.map(compactListResult);
 
     return ok(JSON.stringify({ total: filtered.length, results: items }));
   }
@@ -362,11 +364,7 @@ export function createHandlers(
     if (filtered.length === 0) return ok(JSON.stringify({ game: null, matchPool: 0 }));
 
     const pick = filtered[Math.floor(Math.random() * filtered.length)] as Game;
-    const game = {
-      ...compactResult(pick),
-      dateAdded: emptyToNull(pick.DateAdded),
-      lastPlayedDate: emptyToNull(pick.LastPlayedDate),
-    };
+    const game = compactListResult(pick);
     return ok(JSON.stringify({ game, matchPool: filtered.length }));
   }
 

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import Fuse, { type IFuseOptions } from 'fuse.js';
 import type { Game, GameVersion } from './types.js';
-import { normaliseTitle, sortedPlatformCounts } from './utils.js';
+import { normaliseTitle } from './utils.js';
 
 const stringCache = new Map<string, string>();
 let nanCount = 0;
@@ -228,33 +228,38 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
 
   const gamesByTitle = new Map<string, Game[]>();
   const gamesByNormalisedTitle = new Map<string, Game[]>();
+  const byPlatform = new Map<string, Game[]>();
+  const platformCountMap = new Map<string, number>();
+  const statusMap = new Map<string, number>();
+
   for (const g of games) {
     const lower = g.Title.toLowerCase();
-    let list = gamesByTitle.get(lower);
-    if (!list) {
-      list = [];
-      gamesByTitle.set(lower, list);
+    let titleList = gamesByTitle.get(lower);
+    if (!titleList) {
+      titleList = [];
+      gamesByTitle.set(lower, titleList);
     }
-    list.push(g);
+    titleList.push(g);
 
     const normalised = normaliseTitle(g.Title);
-    let nList = gamesByNormalisedTitle.get(normalised);
-    if (!nList) {
-      nList = [];
-      gamesByNormalisedTitle.set(normalised, nList);
+    let normList = gamesByNormalisedTitle.get(normalised);
+    if (!normList) {
+      normList = [];
+      gamesByNormalisedTitle.set(normalised, normList);
     }
-    nList.push(g);
-  }
+    normList.push(g);
 
-  const byPlatform = new Map<string, Game[]>();
-  for (const g of games) {
-    const key = g.Platform.toLowerCase();
-    let list = byPlatform.get(key);
-    if (!list) {
-      list = [];
-      byPlatform.set(key, list);
+    const platKey = g.Platform.toLowerCase();
+    let platList = byPlatform.get(platKey);
+    if (!platList) {
+      platList = [];
+      byPlatform.set(platKey, platList);
     }
-    list.push(g);
+    platList.push(g);
+
+    platformCountMap.set(g.Platform, (platformCountMap.get(g.Platform) ?? 0) + 1);
+    const status = g.Progress || 'No Status';
+    statusMap.set(status, (statusMap.get(status) ?? 0) + 1);
   }
 
   const platformFuse = new Map<string, Fuse<Game>>();
@@ -264,14 +269,10 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
     platformFuseTitleOnly.set(key, new Fuse(pGames, FUSE_TITLE_ONLY_OPTIONS));
   }
 
-  const platformCounts = sortedPlatformCounts(games);
+  const platformCounts = [...platformCountMap.entries()]
+    .map(([platform, count]) => ({ platform, count }))
+    .sort((a, b) => b.count - a.count);
   const duplicateGroups = buildDuplicateGroups(games);
-
-  const statusMap = new Map<string, number>();
-  for (const g of games) {
-    const status = g.Progress || 'No Status';
-    statusMap.set(status, (statusMap.get(status) ?? 0) + 1);
-  }
   const statusCounts = [...statusMap.entries()]
     .map(([status, count]) => ({ status, count }))
     .sort((a, b) => b.count - a.count);

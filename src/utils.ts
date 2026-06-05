@@ -128,6 +128,19 @@ export function compactResult(game: Game, confidence?: number, exactMatch?: bool
   return result;
 }
 
+export interface CompactListGame extends CompactGame {
+  dateAdded: string | null;
+  lastPlayedDate: string | null;
+}
+
+export function compactListResult(game: Game): CompactListGame {
+  return {
+    ...compactResult(game),
+    dateAdded: emptyToNull(game.DateAdded),
+    lastPlayedDate: emptyToNull(game.LastPlayedDate),
+  };
+}
+
 export function sortedPlatformCounts(games: readonly Game[]): { platform: string; count: number }[] {
   const counts = new Map<string, number>();
   for (const g of games) {
