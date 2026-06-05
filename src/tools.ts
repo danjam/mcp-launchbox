@@ -34,7 +34,6 @@ export const tools = [
           description: 'Game titles to look up',
         },
         platform: { type: 'string', description: "Platform (e.g. 'Windows', 'Arcade')" },
-        maxTitles: { type: 'integer', description: 'Max input titles to check (default 100)' },
         exact: {
           type: 'boolean',
           description: 'Skip normalisation (dashes, colons, &→and)',

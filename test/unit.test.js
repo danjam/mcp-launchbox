@@ -615,8 +615,8 @@ describe('check_library', () => {
     assert.equal(result.ok, false);
   });
 
-  it('rejects when titles exceed limit', async () => {
-    const result = await handlers.check_library({ games: ['A', 'B', 'C'], maxTitles: 2 });
+  it('rejects when titles exceed internal cap', async () => {
+    const result = await handlers.check_library({ games: Array.from({ length: 101 }, (_, i) => `Game ${i}`) });
     assert.equal(result.ok, false);
     if (!result.ok) assert.match(result.message, /Too many titles/);
   });

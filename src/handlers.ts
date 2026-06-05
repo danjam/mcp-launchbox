@@ -54,8 +54,7 @@ export function createHandlers(
       return fail('games is required (array of strings)');
     const validTitles: string[] = titles.filter((t) => t.trim() !== '');
     if (validTitles.length === 0) return fail('games must contain at least one non-empty string');
-    const maxTitles = parseLimit(args.maxTitles, 100);
-    if (typeof maxTitles !== 'number') return maxTitles;
+    const maxTitles = 100;
     if (validTitles.length > maxTitles) return fail(`Too many titles (${validTitles.length}), max is ${maxTitles}`);
     const platform = asString(args.platform);
     if (typeof platform === 'object') return platform;
