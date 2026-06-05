@@ -8,10 +8,13 @@ export const tools = [
     inputSchema: {
       type: 'object',
       properties: {
-        query: { type: 'string', description: 'Search text to match against game titles and series' },
-        platform: { type: 'string', description: "Filter by platform name (e.g. 'Windows', 'Arcade')" },
-        limit: { type: 'integer', description: 'Max results to return (default 25)' },
-        exact: { type: 'boolean', description: 'Disable punctuation normalisation for matching (default false)' },
+        query: { type: 'string', description: 'Game title or series' },
+        platform: { type: 'string', description: "Platform (e.g. 'Windows', 'Arcade')" },
+        limit: { type: 'integer', description: 'Max results (default 25)' },
+        exact: {
+          type: 'boolean',
+          description: 'Skip normalisation (dashes, colons, &→and)',
+        },
       },
       required: ['query'],
     },
@@ -28,11 +31,14 @@ export const tools = [
           type: 'array',
           items: { type: 'string' },
           minItems: 1,
-          description: 'Array of game title strings to look up',
+          description: 'Game titles to look up',
         },
-        platform: { type: 'string', description: 'Filter matches to a specific platform' },
-        limit: { type: 'integer', description: 'Max titles to process (default 100)' },
-        exact: { type: 'boolean', description: 'Disable punctuation normalisation for matching (default false)' },
+        platform: { type: 'string', description: "Platform (e.g. 'Windows', 'Arcade')" },
+        limit: { type: 'integer', description: 'Max input titles to check (default 100)' },
+        exact: {
+          type: 'boolean',
+          description: 'Skip normalisation (dashes, colons, &→and)',
+        },
       },
       required: ['games'],
     },
@@ -45,8 +51,8 @@ export const tools = [
     inputSchema: {
       type: 'object',
       properties: {
-        id: { type: 'string', description: 'The game ID (UUID from search results)' },
-        include_notes: { type: 'boolean', description: 'Include the Notes field (default false)' },
+        id: { type: 'string', description: 'Game ID from search results' },
+        include_notes: { type: 'boolean', description: 'Include notes (default false)' },
       },
       required: ['id'],
     },
@@ -68,21 +74,20 @@ export const tools = [
     inputSchema: {
       type: 'object',
       properties: {
-        platform: { type: 'string', description: "Filter by platform name (e.g. 'Windows', 'Arcade')" },
-        installed: { type: 'boolean', description: 'Filter by installed status' },
-        favorite: { type: 'boolean', description: 'Filter by favorite status' },
+        platform: { type: 'string', description: "Platform (e.g. 'Windows', 'Arcade')" },
+        installed: { type: 'boolean', description: 'true = installed only, false = uninstalled only, omit = all' },
+        favorite: { type: 'boolean', description: 'true = favorites only, false = non-favorites only, omit = all' },
         sort: {
           type: 'string',
           enum: ['title', 'dateAdded', 'lastPlayed', 'playTime'],
-          description:
-            'Sort order (default "title"). dateAdded/lastPlayed sort most recent first, playTime sorts most played first',
+          description: 'Sort order; default "title". dateAdded/lastPlayed: most recent first; playTime: most played first',
         },
         status: {
           oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
-          description: 'Filter by progress status (OR logic for arrays)',
+          description: 'Progress status (OR logic for arrays)',
         },
-        limit: { type: 'integer', description: 'Max results to return (default 25)' },
-        offset: { type: 'integer', description: 'Number of results to skip for pagination (default 0)' },
+        limit: { type: 'integer', description: 'Max results (default 25)' },
+        offset: { type: 'integer', description: 'Results to skip (default 0)' },
       },
     },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -117,12 +122,12 @@ export const tools = [
     inputSchema: {
       type: 'object',
       properties: {
-        platform: { type: 'string', description: "Filter by platform name (e.g. 'Windows', 'Arcade')" },
-        installed: { type: 'boolean', description: 'Filter by installed status' },
-        favorite: { type: 'boolean', description: 'Filter by favorite status' },
+        platform: { type: 'string', description: "Platform (e.g. 'Windows', 'Arcade')" },
+        installed: { type: 'boolean', description: 'true = installed only, false = uninstalled only, omit = all' },
+        favorite: { type: 'boolean', description: 'true = favorites only, false = non-favorites only, omit = all' },
         status: {
           oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
-          description: 'Filter by progress status (OR logic for arrays)',
+          description: 'Progress status (OR logic for arrays)',
         },
       },
     },
@@ -144,7 +149,7 @@ export type ToolName = (typeof tools)[number]['name'];
 
 export function buildToolDefinitions(statusValues: readonly string[]): MCPToolDefinition[] {
   if (statusValues.length === 0) return [...tools];
-  const statusDescription = `Filter by progress status (OR logic for arrays). Valid values: ${statusValues.join(', ')}`;
+  const statusDescription = `Progress status (OR logic for arrays). Valid values: ${statusValues.join(', ')}`;
   return tools.map((t) => {
     if (!('status' in t.inputSchema.properties)) return t;
     return {

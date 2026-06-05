@@ -1000,7 +1000,7 @@ describe('buildToolDefinitions', () => {
     const tools = buildToolDefinitions([]);
     const listGames = tools.find((t) => t.name === 'list_games');
     assert.ok(listGames);
-    assert.equal(listGames.inputSchema.properties.status.description, 'Filter by progress status (OR logic for arrays)');
+    assert.equal(listGames.inputSchema.properties.status.description, 'Progress status (OR logic for arrays)');
   });
 
   it('injects status values into list_games description', () => {
