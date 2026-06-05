@@ -7,7 +7,7 @@ import { FUSE_OPTIONS, FUSE_TITLE_ONLY_OPTIONS } from '../dist/loader.js';
 import { buildToolDefinitions } from '../dist/tools.js';
 import {
   normaliseTitle, parseLimit, asString, compactResult, fail, fuseConfidence, ok,
-  passesSingleTokenTitleGuard,
+  passesSingleTokenTitleGuard, tokenMatchConfidence,
   requireString, sortedPlatformCounts,
 } from '../dist/utils.js';
 
@@ -128,6 +128,93 @@ function mockGames() {
       LastPlayedDate: '',
       DateAdded: '2024-01-01',
       Installed: false,
+      Completed: false,
+      Progress: '',
+    },
+    {
+      ID: 'eee-555',
+      Title: 'DOOM',
+      Platform: 'Windows',
+      Developer: 'id Software',
+      Publisher: 'Bethesda Softworks',
+      Genre: 'FPS',
+      ReleaseDate: '2016-05-13',
+      Notes: '',
+      Source: '',
+      Series: 'DOOM',
+      PlayMode: '',
+      Rating: '',
+      MaxPlayers: '',
+      CommunityStarRating: 4.7,
+      StarRating: 5,
+      Status: '',
+      Favorite: true,
+      DatabaseID: 'db-5',
+      Hide: false,
+      Broken: false,
+      PlayCount: 3,
+      PlayTime: 7200,
+      LastPlayedDate: '2024-03-01',
+      DateAdded: '2023-03-01',
+      Installed: true,
+      Completed: false,
+      Progress: '',
+    },
+    {
+      ID: 'fff-666',
+      Title: 'Doomblade',
+      Platform: 'Windows',
+      Developer: 'Muro Studios',
+      Publisher: 'Muro Studios',
+      Genre: 'Action',
+      ReleaseDate: '2023-04-01',
+      Notes: '',
+      Source: '',
+      Series: '',
+      PlayMode: '',
+      Rating: '',
+      MaxPlayers: '',
+      CommunityStarRating: 3.5,
+      StarRating: 0,
+      Status: '',
+      Favorite: false,
+      DatabaseID: 'db-6',
+      Hide: false,
+      Broken: false,
+      PlayCount: 0,
+      PlayTime: 0,
+      LastPlayedDate: '',
+      DateAdded: '2024-02-01',
+      Installed: false,
+      Completed: false,
+      Progress: '',
+    },
+    {
+      ID: 'ggg-777',
+      Title: 'DOOM Eternal',
+      Platform: 'Windows',
+      Developer: 'id Software',
+      Publisher: 'Bethesda Softworks',
+      Genre: 'FPS',
+      ReleaseDate: '2020-03-20',
+      Notes: '',
+      Source: '',
+      Series: 'DOOM',
+      PlayMode: '',
+      Rating: '',
+      MaxPlayers: '',
+      CommunityStarRating: 4.6,
+      StarRating: 4,
+      Status: '',
+      Favorite: false,
+      DatabaseID: 'db-7',
+      Hide: false,
+      Broken: false,
+      PlayCount: 1,
+      PlayTime: 3600,
+      LastPlayedDate: '2024-01-15',
+      DateAdded: '2023-04-01',
+      Installed: true,
       Completed: false,
       Progress: '',
     },
@@ -274,6 +361,43 @@ describe('search_games', () => {
     const result = await handlers.search_games({ query: 'test', limit: 0 });
     assert.equal(result.ok, false);
   });
+
+  it('exact title match gets confidence 1.0 and exactMatch: true', async () => {
+    const result = await handlers.search_games({ query: 'DOOM' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      const doom = parsed.results.find((r) => r.title === 'DOOM');
+      assert.ok(doom, 'expected DOOM in results');
+      assert.equal(doom.confidence, 1);
+      assert.equal(doom.exactMatch, true);
+    }
+  });
+
+  it('substring-only match gets penalised confidence and no exactMatch', async () => {
+    const result = await handlers.search_games({ query: 'Doom' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      const doomblade = parsed.results.find((r) => r.title === 'Doomblade');
+      assert.ok(doomblade, 'expected Doomblade in results');
+      assert.ok(doomblade.confidence < 1.0, `expected penalised confidence, got ${doomblade.confidence}`);
+      assert.equal(doomblade.exactMatch, undefined);
+    }
+  });
+
+  it('whole-token match in longer title keeps score and no exactMatch', async () => {
+    const result = await handlers.search_games({ query: 'Doom' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      const eternal = parsed.results.find((r) => r.title === 'DOOM Eternal');
+      assert.ok(eternal, 'expected DOOM Eternal in results');
+      // "doom" is a whole token in "doom eternal", so no penalty
+      assert.ok(eternal.confidence >= 0.85, `expected high confidence, got ${eternal.confidence}`);
+      assert.equal(eternal.exactMatch, undefined);
+    }
+  });
 });
 
 describe('get_game_details', () => {
@@ -338,7 +462,7 @@ describe('list_games', () => {
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.equal(parsed.total, 4);
+      assert.equal(parsed.total, 7);
       assert.equal(parsed.results[0].title, 'Behind the Frame');
       assert.ok(!('confidence' in parsed.results[0]));
     }
@@ -378,7 +502,7 @@ describe('list_games', () => {
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.equal(parsed.results[0].title, 'Half-Life 2');
+      assert.equal(parsed.results[0].title, 'DOOM');
     }
   });
 
@@ -387,9 +511,9 @@ describe('list_games', () => {
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.equal(parsed.total, 4);
+      assert.equal(parsed.total, 7);
       assert.equal(parsed.results.length, 1);
-      assert.equal(parsed.results[0].title, 'Half-Life 2');
+      assert.equal(parsed.results[0].title, 'DOOM');
     }
   });
 
@@ -460,7 +584,7 @@ describe('random_game', () => {
       assert.ok(parsed.game.platform);
       assert.ok('dateAdded' in parsed.game);
       assert.ok('lastPlayed' in parsed.game);
-      assert.equal(parsed.matchPool, 4);
+      assert.equal(parsed.matchPool, 7);
     }
   });
 
@@ -509,7 +633,7 @@ describe('list_platforms', () => {
     if (result.ok) {
       const parsed = JSON.parse(result.text);
       assert.equal(parsed[0].platform, 'Windows');
-      assert.equal(parsed[0].count, 3);
+      assert.equal(parsed[0].count, 6);
       assert.equal(parsed[1].platform, 'Linux');
       assert.equal(parsed[1].count, 1);
     }
@@ -524,7 +648,7 @@ describe('get_stats', () => {
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
-      assert.equal(parsed.totalGames, 4);
+      assert.equal(parsed.totalGames, 7);
       assert.equal(parsed.totalPlatforms, 2);
       assert.equal(parsed.topPlatforms.length, 2);
       assert.ok(Array.isArray(parsed.statusCounts));
@@ -748,7 +872,7 @@ describe('reload_library', () => {
     if (result.ok) {
       const parsed = JSON.parse(result.text);
       assert.equal(parsed.reloaded, true);
-      assert.equal(parsed.games, 4);
+      assert.equal(parsed.games, 7);
       assert.equal(parsed.platforms, 2);
     }
   });
@@ -960,6 +1084,46 @@ describe('utils', () => {
     });
   });
 
+  describe('tokenMatchConfidence', () => {
+    it('returns 1.0 when query token matches a whole title token', () => {
+      assert.equal(tokenMatchConfidence('doom', 'doom'), 1.0);
+    });
+
+    it('returns 1.0 when query token matches a whole token in a multi-word title', () => {
+      assert.equal(tokenMatchConfidence('doom', 'doom eternal'), 1.0);
+    });
+
+    it('returns 1.0 for multi-token query where all tokens match whole title tokens', () => {
+      assert.equal(tokenMatchConfidence('doom eternal', 'doom eternal'), 1.0);
+    });
+
+    it('penalises when query token only matches as substring of title token', () => {
+      const result = tokenMatchConfidence('doom', 'doomblade');
+      assert.equal(result, 0.75);
+    });
+
+    it('penalises each non-matching token independently', () => {
+      // Both "doom" and "blade" are substrings of "doomblade" but neither is a whole token
+      const result = tokenMatchConfidence('doom blade', 'doomblade');
+      assert.equal(result, 0.75 * 0.75);
+    });
+
+    it('returns 1.0 for empty query', () => {
+      assert.equal(tokenMatchConfidence('', 'doom'), 1.0);
+    });
+
+    it('allows typos within Levenshtein tolerance for whole-token match', () => {
+      // "zelda" (5 chars) has tolerance floor(5/4) = 1
+      assert.equal(tokenMatchConfidence('zelda', 'zelde'), 1.0);
+    });
+
+    it('short query tokens (< 5 chars) require exact whole-token match', () => {
+      // "doom" (4 chars) has tolerance 0, so "doomx" doesn't match as whole token
+      const result = tokenMatchConfidence('doom', 'doomx');
+      assert.equal(result, 0.75);
+    });
+  });
+
   describe('compactResult', () => {
     it('maps game fields correctly', () => {
       const game = mockGames()[0];
@@ -977,6 +1141,20 @@ describe('utils', () => {
       const result = compactResult(game, 1.0);
       assert.deepEqual(Object.keys(result).sort(), ['confidence', 'id', 'installed', 'platform', 'playTime', 'title']);
     });
+
+    it('includes exactMatch when true', () => {
+      const game = mockGames()[0];
+      const result = compactResult(game, 1.0, true);
+      assert.equal(result.exactMatch, true);
+      assert.deepEqual(Object.keys(result).sort(), ['confidence', 'exactMatch', 'id', 'installed', 'platform', 'playTime', 'title']);
+    });
+
+    it('omits exactMatch when undefined', () => {
+      const game = mockGames()[0];
+      const result = compactResult(game, 1.0, undefined);
+      assert.equal(result.exactMatch, undefined);
+      assert.ok(!('exactMatch' in result));
+    });
   });
 
   describe('sortedPlatformCounts', () => {
@@ -988,7 +1166,7 @@ describe('utils', () => {
       const games = mockGames();
       const result = sortedPlatformCounts(games);
       assert.equal(result[0].platform, 'Windows');
-      assert.equal(result[0].count, 3);
+      assert.equal(result[0].count, 6);
       assert.equal(result[1].platform, 'Linux');
       assert.equal(result[1].count, 1);
     });

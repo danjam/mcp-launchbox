@@ -13,6 +13,7 @@ import {
   parseLimit,
   passesSingleTokenTitleGuard,
   requireString,
+  tokenMatchConfidence,
 } from './utils.js';
 
 function matchesPlatform(gamePlatform: string, filter: string): boolean {
@@ -41,9 +42,17 @@ export function createHandlers(
     const index = platform
       ? (state.library.platformFuse.get(platform.toLowerCase()) ?? state.library.fuse)
       : state.library.fuse;
-    const results = index.search(exact ? query : normaliseTitle(query));
+    const normalisedQuery = exact ? query : normaliseTitle(query);
+    const results = index.search(normalisedQuery);
 
-    const items = results.slice(0, limit).map((r) => compactResult(r.item, fuseConfidence(r.score ?? 0)));
+    const items = results.slice(0, limit).map((r) => {
+      const rawConfidence = fuseConfidence(r.score ?? 0);
+      const titleNorm = normaliseTitle(r.item.Title);
+      const penalty = tokenMatchConfidence(normalisedQuery, titleNorm);
+      const confidence = Math.round(rawConfidence * penalty * 100) / 100;
+      const isExactMatch = normalisedQuery === titleNorm;
+      return compactResult(r.item, confidence, isExactMatch || undefined);
+    });
 
     return ok(JSON.stringify({ results: items }));
   }

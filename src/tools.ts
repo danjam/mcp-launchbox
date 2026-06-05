@@ -4,7 +4,7 @@ export const tools = [
   {
     name: 'search_games',
     description:
-      'Search the library by title and series. Confidence: 1.0 = perfect, ≥0.85 = very likely, ≥0.65 = probable, <0.65 = speculative. Use id with get_game_details.',
+      'Search the library by title and series. Confidence: 1.0 = perfect, ≥0.85 = very likely, ≥0.65 = probable, <0.65 = speculative. Results include exactMatch: true when the normalised query equals the normalised title. Use id with get_game_details.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -80,7 +80,8 @@ export const tools = [
         sort: {
           type: 'string',
           enum: ['title', 'dateAdded', 'lastPlayed', 'playTime'],
-          description: 'Sort order; default "title". dateAdded/lastPlayed: most recent first; playTime: most played first',
+          description:
+            'Sort order; default "title". dateAdded/lastPlayed: most recent first; playTime: most played first',
         },
         status: {
           oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
