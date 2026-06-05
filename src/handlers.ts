@@ -207,12 +207,24 @@ export function createHandlers(
       return fail(`sort must be one of: ${validSorts.join(', ')}`);
     const sortKey = (sort ?? 'title') as (typeof validSorts)[number];
 
+    let statusFilter: string[] | undefined;
+    if (args.status !== undefined && args.status !== null) {
+      if (typeof args.status === 'string') {
+        statusFilter = [args.status];
+      } else if (Array.isArray(args.status) && args.status.every((s) => typeof s === 'string')) {
+        statusFilter = args.status as string[];
+      } else {
+        return fail('status must be a string or array of strings');
+      }
+    }
+
     let filtered: readonly Game[] = state.library.games;
     if (platform) filtered = filtered.filter((g) => matchesPlatform(g.Platform, platform));
     if (args.installed === true) filtered = filtered.filter((g) => g.Installed);
     if (args.installed === false) filtered = filtered.filter((g) => !g.Installed);
     if (args.favorite === true) filtered = filtered.filter((g) => g.Favorite);
     if (args.favorite === false) filtered = filtered.filter((g) => !g.Favorite);
+    if (statusFilter) filtered = filtered.filter((g) => statusFilter.includes(g.Progress));
 
     const sorted = [...filtered].sort((a, b) => {
       switch (sortKey) {

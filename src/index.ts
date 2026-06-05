@@ -3,7 +3,7 @@ import { createInterface } from 'node:readline';
 
 import { createHandlers } from './handlers.js';
 import { buildLibrary, type Library } from './loader.js';
-import { type ToolName, tools } from './tools.js';
+import { buildToolDefinitions, type ToolName } from './tools.js';
 import type { MCPRequest, MCPResponse, RequestId } from './types.js';
 
 const PARSE_ERROR = -32700;
@@ -19,8 +19,14 @@ const platformsPath: string = process.env.LAUNCHBOX_PLATFORMS_PATH;
 
 process.stdout.on('error', () => process.exit(0));
 
-function send(msg: MCPResponse): void {
+type MCPMessage = MCPResponse | { jsonrpc: '2.0'; method: string };
+
+function send(msg: MCPMessage): void {
   process.stdout.write(`${JSON.stringify(msg)}\n`);
+}
+
+function notify(method: string): void {
+  send({ jsonrpc: '2.0', method });
 }
 
 function reply(id: RequestId, result: unknown): void {
@@ -62,6 +68,7 @@ let reloading: Promise<void> | null = null;
 async function reload(): Promise<void> {
   if (reloading) return reloading;
   const oldGamesById = state.library.gamesById;
+  const oldStatuses = state.library.distinctStatuses;
   reloading = buildLibrary(platformsPath).then((lib) => {
     const added: { id: string; title: string; platform: string }[] = [];
     const removed: { id: string; title: string; platform: string }[] = [];
@@ -73,6 +80,8 @@ async function reload(): Promise<void> {
     }
     state.lastReloadDiff = { added, removed };
     state.library = lib;
+    if (lib.distinctStatuses.length !== oldStatuses.length || lib.distinctStatuses.some((s, i) => s !== oldStatuses[i]))
+      notify('notifications/tools/list_changed');
   });
   try {
     await reloading;
@@ -110,13 +119,13 @@ function handleRequest(req: MCPRequest): void {
       reply(id, {
         protocolVersion: '2025-11-25',
         serverInfo: { name: 'mcp-launchbox', version: '1.0.0' },
-        capabilities: { tools: {} },
+        capabilities: { tools: { listChanged: true } },
         instructions:
           'Search and browse a local LaunchBox game library. Use when looking up games, checking platform collections, finding duplicates, or getting library statistics.',
       });
       break;
     case 'tools/list':
-      reply(id, { tools });
+      reply(id, { tools: buildToolDefinitions(state.library.distinctStatuses) });
       break;
     case 'tools/call': {
       const name = req.params?.name;

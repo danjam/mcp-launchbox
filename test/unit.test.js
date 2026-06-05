@@ -4,6 +4,7 @@ import Fuse from 'fuse.js';
 
 import { createHandlers } from '../dist/handlers.js';
 import { FUSE_OPTIONS, FUSE_TITLE_ONLY_OPTIONS } from '../dist/loader.js';
+import { buildToolDefinitions } from '../dist/tools.js';
 import {
   normaliseTitle, parseLimit, asString, compactResult, fail, fuseConfidence, ok,
   passesSingleTokenTitleGuard,
@@ -41,7 +42,7 @@ function mockGames() {
       DateAdded: '2023-01-01',
       Installed: true,
       Completed: true,
-      Progress: '',
+      Progress: 'Active / In Progress',
     },
     {
       ID: 'bbb-222',
@@ -99,7 +100,7 @@ function mockGames() {
       DateAdded: '2023-02-01',
       Installed: true,
       Completed: false,
-      Progress: '',
+      Progress: 'Active / In Progress',
     },
     {
       ID: 'ddd-444',
@@ -186,9 +187,14 @@ function mockLibrary() {
     .filter((g) => g.entries >= 2)
     .map((g) => ({ title: g.title, platforms: [...g.platforms].sort(), entries: g.entries }))
     .sort((a, b) => b.entries - a.entries);
+  const statusMap = new Map();
+  for (const g of games) {
+    if (g.Progress) statusMap.set(g.Progress, (statusMap.get(g.Progress) ?? 0) + 1);
+  }
+  const distinctStatuses = [...statusMap.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => s);
   return {
     gamesById, gamesByTitle, gamesByNormalisedTitle, games, versionsByGameId: new Map(),
-    fuse, fuseTitleOnly, platformFuse, platformFuseTitleOnly, platformCounts, duplicateGroups,
+    fuse, fuseTitleOnly, platformFuse, platformFuseTitleOnly, platformCounts, duplicateGroups, distinctStatuses,
   };
 }
 
@@ -395,6 +401,48 @@ describe('list_games', () => {
   it('rejects invalid offset', async () => {
     const result = await handlers.list_games({ offset: -1 });
     assert.equal(result.ok, false);
+  });
+
+  it('filters by single status string', async () => {
+    const result = await handlers.list_games({ status: 'Active / In Progress' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.total, 2);
+      assert.ok(parsed.results.every((r) => ['Half-Life 2', 'Portal'].includes(r.title)));
+    }
+  });
+
+  it('filters by status array (OR logic)', async () => {
+    const result = await handlers.list_games({ status: ['Active / In Progress', 'Completed'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.total, 2);
+    }
+  });
+
+  it('returns empty results for non-matching status', async () => {
+    const result = await handlers.list_games({ status: 'Completed' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.total, 0);
+    }
+  });
+
+  it('rejects non-string non-array status', async () => {
+    const result = await handlers.list_games({ status: 123 });
+    assert.equal(result.ok, false);
+  });
+
+  it('combines status with other filters', async () => {
+    const result = await handlers.list_games({ status: 'Active / In Progress', platform: 'Windows' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.total, 2);
+    }
   });
 });
 
@@ -890,5 +938,29 @@ describe('utils', () => {
       assert.equal(result[1].platform, 'Linux');
       assert.equal(result[1].count, 1);
     });
+  });
+});
+
+describe('buildToolDefinitions', () => {
+  it('returns base tools when no status values', () => {
+    const tools = buildToolDefinitions([]);
+    const listGames = tools.find((t) => t.name === 'list_games');
+    assert.ok(listGames);
+    assert.equal(listGames.inputSchema.properties.status.description, 'Filter by progress status (OR logic for arrays)');
+  });
+
+  it('injects status values into list_games description', () => {
+    const tools = buildToolDefinitions(['Active / In Progress', 'Completed']);
+    const listGames = tools.find((t) => t.name === 'list_games');
+    assert.ok(listGames);
+    assert.ok(listGames.inputSchema.properties.status.description.includes('Active / In Progress'));
+    assert.ok(listGames.inputSchema.properties.status.description.includes('Completed'));
+  });
+
+  it('does not modify other tools', () => {
+    const tools = buildToolDefinitions(['Active / In Progress']);
+    const searchGames = tools.find((t) => t.name === 'search_games');
+    assert.ok(searchGames);
+    assert.equal(searchGames.inputSchema.properties.status, undefined);
   });
 });

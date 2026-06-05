@@ -38,11 +38,11 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 - `src/index.ts` — Entrypoint: JSON-RPC error code constants, I/O helpers (`send`, `reply`, `textReply`, `errorReply`, `error`), env var check, library loading, reload concurrency guard, request dispatch with structural validation, readline listener, stdout error handler
 - `src/handlers.ts` — `matchesPlatform` helper, `createHandlers(state, reload)` factory returning `Record<ToolName, ToolHandler>`; all 8 tool handler functions (sync except `handleReloadLibrary`)
 - `src/utils.ts` — Pure helpers: result constructors (`ok`, `fail`), argument validation (`parseLimit`, `asString`, `requireString`), search helpers (`fuseConfidence(score: number)`, `normaliseTitle`, `compactResult`, `sortedPlatformCounts`), response formatting (`formatPlayTime`, `emptyToNull`)
-- `src/tools.ts` — Tool schema definitions with MCP annotations (`as const satisfies MCPToolDefinition[]`); derives `ToolName` union type for type-safe handler map
+- `src/tools.ts` — Tool schema definitions with MCP annotations (`as const satisfies MCPToolDefinition[]`); derives `ToolName` union type for type-safe handler map; `buildToolDefinitions(statusValues)` returns dynamic tool schemas with status values injected into `list_games` description
 - `src/loader.ts` — XML parsing with `htmlEntities`, game extraction, string interning (`loadGames`); `AdditionalApplication` parsing for game versions/storefronts (`extractVersion`); Fuse.js index building (full + per-platform + title-only variants), `gamesByTitle` (lowercase) and `gamesByNormalisedTitle` maps for fast-path lookups, `normalisingGetFn` custom Fuse getter for punctuation-normalised matching, precomputed `platformCounts` and `duplicateGroups` (`buildLibrary`); exports `FUSE_OPTIONS` and `FUSE_TITLE_ONLY_OPTIONS`
 - `src/types.ts` — All type definitions: `Game`, `GameVersion`, `RequestId`, `ToolResult`, `ToolHandler`, `MCPToolAnnotations`, MCP interfaces
 
-**Request flow:** stdin line → JSON parse → structural validation (object check) → `handleRequest` dispatches by MCP method (`initialize`, `tools/list`, `tools/call`) → `handleToolCall` looks up handler via `Object.hasOwn` → handler returns `ToolResult` → dispatch maps result to JSON-RPC response on stdout. Parse errors and invalid structures return proper JSON-RPC error codes via named constants.
+**Request flow:** stdin line → JSON parse → structural validation (object check) → `handleRequest` dispatches by MCP method (`initialize`, `tools/list`, `tools/call`) → `handleToolCall` looks up handler via `Object.hasOwn` → handler returns `ToolResult` → dispatch maps result to JSON-RPC response on stdout. Parse errors and invalid structures return proper JSON-RPC error codes via named constants. Server declares `tools: { listChanged: true }` capability; `tools/list` returns dynamically-built schemas via `buildToolDefinitions()` with current status values.
 
 **Data loading:**
 - `LAUNCHBOX_PLATFORMS_PATH` points directly at the directory containing platform XML files (one file per platform)
@@ -57,7 +57,7 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 - Title-only Fuse indexes (`fuseTitleOnly`, `platformFuseTitleOnly`) used by `check_library` for fuzzy fallback — separate from the main indexes that also search Series
 - Per-platform Fuse indexes avoid full-library scans when a platform filter is provided; Game objects are shared by reference across all indexes
 - Fuse indexes use a custom `normalisingGetFn` that applies `normaliseTitle` at index time (dashes, colons, `&`/`and`, smart quotes → normalised form)
-- Precomputed at build time: `platformCounts` (sorted) and `duplicateGroups` (cross-platform and same-platform, by `entries` count) for O(1) access
+- Precomputed at build time: `platformCounts` (sorted), `duplicateGroups` (cross-platform and same-platform, by `entries` count), and `distinctStatuses` (non-empty Progress values sorted by frequency) for O(1) access
 - String interning on repetitive fields (Platform, Developer, Genre, etc.) to reduce memory; cache cleared after loading
 - `buildLibrary()` returns a `Library` object held in a mutable `state` ref so `reload_library` can swap it
 - Concurrent `reload_library` calls coalesce (second call awaits the first)
@@ -71,9 +71,11 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 - `search_games` and `check_library` accept an optional `exact` param to disable punctuation normalisation
 - `check_library` includes `nearMisses` (up to 5 candidates with confidence 0.40–0.84) when `matches` is empty; a nearMiss with confidence 0 means a shorter title exists — search the head title to confirm ownership
 - `check_library` results don't include storefront/version info — use `get_game_details` for that
-- `list_games` returns `{ total, results }` where results are compact game objects without confidence but with `dateAdded` and `lastPlayed` fields; supports filters (`platform`, `installed`, `favorite`), sort (`title`, `dateAdded`, `lastPlayed`, `playTime`), and pagination (`limit`, `offset`)
+- `list_games` returns `{ total, results }` where results are compact game objects without confidence but with `dateAdded` and `lastPlayed` fields; supports filters (`platform`, `installed`, `favorite`, `status`), sort (`title`, `dateAdded`, `lastPlayed`, `playTime`), and pagination (`limit`, `offset`)
+- `list_games` `status` filter accepts a string or array of strings (OR logic); matches against `game.Progress` exactly
 - `get_stats` includes `statusCounts` — all distinct progress values with counts, sorted descending
 - `reload_library` returns `added`/`removed` arrays (id, title, platform) showing what changed since the previous load; omitted on first load
+- `reload_library` sends `notifications/tools/list_changed` if the set of distinct status values changed, so clients re-fetch tool schemas with updated status descriptions
 
 **Key dependencies:** `fast-xml-parser` for XML parsing, `fuse.js` for fuzzy search.
 

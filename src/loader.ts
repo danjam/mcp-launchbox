@@ -266,6 +266,12 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
   const platformCounts = sortedPlatformCounts(games);
   const duplicateGroups = buildDuplicateGroups(games);
 
+  const statusMap = new Map<string, number>();
+  for (const g of games) {
+    if (g.Progress) statusMap.set(g.Progress, (statusMap.get(g.Progress) ?? 0) + 1);
+  }
+  const distinctStatuses = [...statusMap.entries()].sort((a, b) => b[1] - a[1]).map(([status]) => status);
+
   return {
     gamesById,
     gamesByTitle,
@@ -278,6 +284,7 @@ export async function buildLibrary(platformsPath: string): Promise<Library> {
     platformFuseTitleOnly,
     platformCounts,
     duplicateGroups,
+    distinctStatuses,
   };
 }
 
@@ -313,4 +320,5 @@ export interface Library {
   readonly platformFuseTitleOnly: ReadonlyMap<string, Fuse<Game>>;
   readonly platformCounts: readonly { platform: string; count: number }[];
   readonly duplicateGroups: readonly DuplicateGroup[];
+  readonly distinctStatuses: readonly string[];
 }

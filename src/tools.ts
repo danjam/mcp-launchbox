@@ -78,6 +78,10 @@ export const tools = [
           description:
             'Sort order (default "title"). dateAdded/lastPlayed sort most recent first, playTime sorts most played first',
         },
+        status: {
+          oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
+          description: 'Filter by progress status (OR logic for arrays)',
+        },
         limit: { type: 'integer', description: 'Max results to return (default 25)' },
         offset: { type: 'integer', description: 'Number of results to skip for pagination (default 0)' },
       },
@@ -120,3 +124,24 @@ export const tools = [
 ] as const satisfies MCPToolDefinition[];
 
 export type ToolName = (typeof tools)[number]['name'];
+
+export function buildToolDefinitions(statusValues: readonly string[]): MCPToolDefinition[] {
+  if (statusValues.length === 0) return [...tools];
+  const statusDescription = `Filter by progress status (OR logic for arrays). Valid values: ${statusValues.join(', ')}`;
+  return tools.map((t) => {
+    if (t.name !== 'list_games') return t;
+    return {
+      ...t,
+      inputSchema: {
+        ...t.inputSchema,
+        properties: {
+          ...t.inputSchema.properties,
+          status: {
+            ...t.inputSchema.properties.status,
+            description: statusDescription,
+          },
+        },
+      },
+    };
+  });
+}

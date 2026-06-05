@@ -131,6 +131,7 @@ Tool: `list_games`
 | `platform` | string | No | Filter by platform name |
 | `installed` | boolean | No | Filter by installed status |
 | `favorite` | boolean | No | Filter by favorite status |
+| `status` | string \| string[] | No | Filter by progress status (exact match, OR logic for arrays) |
 | `sort` | string | No | Sort order: `title` (default), `dateAdded`, `lastPlayed`, `playTime` |
 | `limit` | number | No | Max results to return (default 25) |
 | `offset` | number | No | Number of results to skip for pagination (default 0) |
@@ -160,7 +161,7 @@ Tool: `get_stats`
 
 ### Reload Library
 
-Reload all game data from disk. Use after adding or removing games in LaunchBox. Returns game/platform counts plus `added` and `removed` arrays showing what changed since the previous load (id, title, platform for each). On first load, the diff is omitted. No parameters needed.
+Reload all game data from disk. Use after adding or removing games in LaunchBox. Returns game/platform counts plus `added` and `removed` arrays showing what changed since the previous load (id, title, platform for each). On first load, the diff is omitted. If the set of progress/status values changes, a `notifications/tools/list_changed` notification is sent so clients can re-fetch updated tool schemas. No parameters needed.
 
 Tool: `reload_library`
 
