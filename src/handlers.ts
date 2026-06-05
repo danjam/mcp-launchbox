@@ -87,7 +87,10 @@ export function createHandlers(
 
       const NEAR_MISS_FLOOR = 0.4;
       const matches: ReturnType<typeof compactResult>[] = [];
-      const nearMisses: { title: string; platform: string; confidence: number }[] = [];
+      const nearMisses: (
+        | { title: string; platform: string; confidence: number }
+        | { title: string; platform: string; prefixMatch: true }
+      )[] = [];
 
       for (const r of fuzzyResults) {
         const confidence = fuseConfidence(r.score ?? 0);
@@ -109,15 +112,13 @@ export function createHandlers(
 
       if (matches.length > 0) return { query, matches };
 
-      // Prefix fallback: when both matches and nearMisses are empty, the
-      // query may have a subtitle the library entry lacks (e.g. query
-      // "Behind the Frame: The Finest Scenery", library has "Behind the
-      // Frame"). Try progressively shorter token prefixes of the normalised
-      // query against the title map. Surfaced as nearMisses (confidence 0),
-      // not matches — prefix hits are leads, not ownership assertions.
-      // Confidence 0 is intentionally out-of-band (nearMisses from Fuse
-      // carry 0.4–0.85) so consumers can distinguish the source.
-      if (nearMisses.length === 0) {
+      // Prefix fallback: the query may have a subtitle the library entry
+      // lacks (e.g. query "Behind the Frame: The Finest Scenery", library
+      // has "Behind the Frame"). Try progressively shorter token prefixes
+      // of the normalised query against the title map. Surfaced as
+      // nearMisses with `prefixMatch: true` — not matches — prefix hits
+      // are leads, not ownership assertions.
+      if (nearMisses.length < 5) {
         const normTokens = normaliseTitle(query).split(/\s+/).filter(Boolean);
         for (let i = normTokens.length - 1; i >= 1; i--) {
           const prefix = normTokens.slice(0, i).join(' ');
@@ -128,7 +129,7 @@ export function createHandlers(
           }
           for (const g of prefixCandidates) {
             if (nearMisses.length >= 5) break;
-            nearMisses.push({ title: g.Title, platform: g.Platform, confidence: 0 });
+            nearMisses.push({ title: g.Title, platform: g.Platform, prefixMatch: true });
           }
           break;
         }
