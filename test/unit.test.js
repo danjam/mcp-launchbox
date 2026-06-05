@@ -580,8 +580,7 @@ describe('check_library', () => {
 
   it('returns nearMisses for close but below-threshold results', async () => {
     // "Portaler" fuzzy-matches "Portal" with confidence ~0.75 (below 0.85
-    // threshold but above 0.40 near-miss floor), and passes the token
-    // boundary guard (Levenshtein 2, tolerance floor(8/4)=2).
+    // threshold but above 0.40 near-miss floor).
     const result = await handlers.check_library({ games: ['Portaler'] });
     assert.equal(result.ok, true);
     if (result.ok) {
@@ -595,6 +594,7 @@ describe('check_library', () => {
       assert.ok(entry.nearMisses[0].platform);
     }
   });
+
 
   it('finds fuzzy match via slow path', async () => {
     const result = await handlers.check_library({ games: ['Half-Life'] });

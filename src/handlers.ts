@@ -124,15 +124,11 @@ export function createHandlers(
 
       for (const r of fuzzyResults) {
         const confidence = fuseConfidence(r.score ?? 0);
-        // Token-boundary guard: every query token must match a whole token
-        // in the title (Levenshtein-tolerant). Prevents short differentiating
-        // tokens like "2" in "Halo 2" being absorbed into longer tokens like
-        // "2600" in "Halo 2600", which Fuse scores as near-perfect.
+        if (confidence < NEAR_MISS_FLOOR) continue;
         const titleNorm = normaliseTitle(r.item.Title);
-        if (!passesTokenBoundaryGuard(normalisedQuery, titleNorm)) continue;
-        if (confidence >= CONFIDENCE_THRESHOLD) {
+        if (confidence >= CONFIDENCE_THRESHOLD && passesTokenBoundaryGuard(normalisedQuery, titleNorm)) {
           matches.push(compactResult(r.item, confidence));
-        } else if (confidence >= NEAR_MISS_FLOOR && nearMisses.length < 5) {
+        } else if (nearMisses.length < 5) {
           nearMisses.push({ title: r.item.Title, platform: r.item.Platform, confidence });
         }
       }
