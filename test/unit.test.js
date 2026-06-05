@@ -897,7 +897,7 @@ describe('check_library', () => {
       assert.equal(entry.matches.length, 0);
       assert.ok(entry.nearMisses.length > 0, 'expected prefix fallback nearMiss');
       assert.equal(entry.nearMisses[0].title, 'Behind the Frame');
-      assert.equal(entry.nearMisses[0].prefixMatch, true);
+      assert.equal(entry.nearMisses[0].shorterTitle, true);
       assert.equal(entry.nearMisses[0].confidence, undefined);
       assert.equal(parsed.summary.owned, 0);
       assert.equal(parsed.summary.new, 1);

@@ -138,7 +138,7 @@ export function createHandlers(
       const matches: ReturnType<typeof compactResult>[] = [];
       const nearMisses: (
         | { title: string; platform: string; confidence: number }
-        | { title: string; platform: string; prefixMatch: true }
+        | { title: string; platform: string; shorterTitle: true }
       )[] = [];
 
       for (const r of fuzzyResults) {
@@ -158,7 +158,7 @@ export function createHandlers(
       // lacks (e.g. query "Behind the Frame: The Finest Scenery", library
       // has "Behind the Frame"). Try progressively shorter token prefixes
       // of the normalised query against the title map. Surfaced as
-      // nearMisses with `prefixMatch: true` — not matches — prefix hits
+      // nearMisses with `shorterTitle: true` — not matches — prefix hits
       // are leads, not ownership assertions.
       if (nearMisses.length < 5) {
         const normTokens = normaliseTitle(query).split(/\s+/).filter(Boolean);
@@ -171,7 +171,7 @@ export function createHandlers(
           }
           for (const g of prefixCandidates) {
             if (nearMisses.length >= 5) break;
-            nearMisses.push({ title: g.Title, platform: g.Platform, prefixMatch: true });
+            nearMisses.push({ title: g.Title, platform: g.Platform, shorterTitle: true });
           }
           break;
         }
