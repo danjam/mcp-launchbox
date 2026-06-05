@@ -38,10 +38,17 @@ export function createHandlers(
     if (typeof limit !== 'number') return limit;
     const exact = args.exact === true;
 
+    if (exact) {
+      let candidates = state.library.gamesByTitle.get(query.toLowerCase()) ?? [];
+      if (platform) candidates = candidates.filter((g) => matchesPlatform(g.Platform, platform));
+      const items = candidates.slice(0, limit).map((g) => compactResult(g, 1.0));
+      return ok(JSON.stringify({ results: items }));
+    }
+
     const index = platform
       ? (state.library.platformFuse.get(platform.toLowerCase()) ?? state.library.fuse)
       : state.library.fuse;
-    const results = index.search(exact ? query : normaliseTitle(query));
+    const results = index.search(normaliseTitle(query));
 
     const items = results.slice(0, limit).map((r) => compactResult(r.item, fuseConfidence(r.score ?? 0)));
 
@@ -78,11 +85,14 @@ export function createHandlers(
         };
       }
 
+      // Exact mode: no fuzzy fallback, no prefix fallback
+      if (exact) return { query, matches: [], nearMisses: [] };
+
       // Slow path: fuzzy search (title only)
       const titleIndex = platform
         ? (state.library.platformFuseTitleOnly.get(platform.toLowerCase()) ?? state.library.fuseTitleOnly)
         : state.library.fuseTitleOnly;
-      const normalisedQuery = exact ? query : normaliseTitle(query);
+      const normalisedQuery = normaliseTitle(query);
       const fuzzyResults = titleIndex.search(normalisedQuery);
 
       const NEAR_MISS_FLOOR = 0.4;

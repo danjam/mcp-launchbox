@@ -274,6 +274,56 @@ describe('search_games', () => {
     const result = await handlers.search_games({ query: 'test', limit: 0 });
     assert.equal(result.ok, false);
   });
+
+  it('exact:true returns exact title match with confidence 1.0', async () => {
+    const result = await handlers.search_games({ query: 'Half-Life 2', exact: true });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.results.length, 2);
+      assert.equal(parsed.results[0].confidence, 1.0);
+      assert.equal(parsed.results[0].title, 'Half-Life 2');
+    }
+  });
+
+  it('exact:true returns empty results for non-matching title (no fuzzy fallback)', async () => {
+    const result = await handlers.search_games({ query: 'Half-Life', exact: true });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.results.length, 0);
+    }
+  });
+
+  it('exact:true returns all platforms with same title', async () => {
+    const result = await handlers.search_games({ query: 'Half-Life 2', exact: true });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      const platforms = parsed.results.map((r) => r.platform).sort();
+      assert.deepEqual(platforms, ['Linux', 'Windows']);
+    }
+  });
+
+  it('exact:true is case insensitive', async () => {
+    const result = await handlers.search_games({ query: 'half-life 2', exact: true });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.results.length, 2);
+      assert.equal(parsed.results[0].title, 'Half-Life 2');
+    }
+  });
+
+  it('exact:true with platform filter', async () => {
+    const result = await handlers.search_games({ query: 'Half-Life 2', exact: true, platform: 'Linux' });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.results.length, 1);
+      assert.equal(parsed.results[0].platform, 'Linux');
+    }
+  });
 });
 
 describe('get_game_details', () => {
@@ -642,7 +692,30 @@ describe('check_library', () => {
     if (!result.ok) assert.match(result.message, /non-empty/i);
   });
 
-  it('surfaces prefix nearMiss with exact:true', async () => {
+  it('exact:true returns match with confidence 1.0', async () => {
+    const result = await handlers.check_library({ games: ['Half-Life 2'], exact: true });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      assert.equal(parsed.results[0].matches.length, 2);
+      assert.equal(parsed.results[0].matches[0].confidence, 1.0);
+      assert.equal(parsed.summary.owned, 1);
+    }
+  });
+
+  it('exact:true returns empty matches and empty nearMisses on miss (no fuzzy fallback)', async () => {
+    const result = await handlers.check_library({ games: ['Half-Life'], exact: true });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      const entry = parsed.results[0];
+      assert.equal(entry.matches.length, 0);
+      assert.deepEqual(entry.nearMisses, []);
+      assert.equal(parsed.summary.new, 1);
+    }
+  });
+
+  it('exact:true does not run prefix fallback', async () => {
     const result = await handlers.check_library({
       games: ['Behind the Frame: The Finest Scenery'],
       exact: true,
@@ -652,9 +725,7 @@ describe('check_library', () => {
       const parsed = JSON.parse(result.text);
       const entry = parsed.results[0];
       assert.equal(entry.matches.length, 0);
-      assert.ok(entry.nearMisses.length > 0, 'exact mode should still surface prefix nearMiss');
-      assert.equal(entry.nearMisses[0].title, 'Behind the Frame');
-      assert.equal(entry.nearMisses[0].confidence, 0);
+      assert.deepEqual(entry.nearMisses, [], 'exact mode should not run prefix fallback');
     }
   });
 

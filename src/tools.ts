@@ -13,7 +13,7 @@ export const tools = [
         limit: { type: 'integer', description: 'Max results (default 25)' },
         exact: {
           type: 'boolean',
-          description: 'Skip normalisation (dashes, colons, &→and)',
+          description: 'Exact title match only, no fuzzy search (default false)',
         },
       },
       required: ['query'],
@@ -37,7 +37,7 @@ export const tools = [
         limit: { type: 'integer', description: 'Max input titles to check (default 100)' },
         exact: {
           type: 'boolean',
-          description: 'Skip normalisation (dashes, colons, &→and)',
+          description: 'Exact title match only, no fuzzy search (default false)',
         },
       },
       required: ['games'],
@@ -80,7 +80,8 @@ export const tools = [
         sort: {
           type: 'string',
           enum: ['title', 'dateAdded', 'lastPlayed', 'playTime'],
-          description: 'Sort order; default "title". dateAdded/lastPlayed: most recent first; playTime: most played first',
+          description:
+            'Sort order; default "title". dateAdded/lastPlayed: most recent first; playTime: most played first',
         },
         status: {
           oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
