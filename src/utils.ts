@@ -42,9 +42,9 @@ export function fuseConfidence(score: number): number {
 
 // Levenshtein with an early-out cap, if the running edit distance exceeds
 // `cap`, returns `cap + 1` so callers can short-circuit. Used by the
-// single-token guard below; we never need the exact distance, only whether
-// it's within the tolerance.
-function levenshteinAtMost(a: string, b: string, cap: number): number {
+// single-token guard and token match confidence below; we never need the
+// exact distance, only whether it's within the tolerance.
+export function levenshteinAtMost(a: string, b: string, cap: number): number {
   if (Math.abs(a.length - b.length) > cap) return cap + 1;
   const aLen = a.length;
   const bLen = b.length;
@@ -95,6 +95,31 @@ export function passesTokenBoundaryGuard(query: string, title: string): boolean 
   return true;
 }
 
+// Token confidence penalty: for each query token, check if it matches a
+// whole title token (Levenshtein-tolerant, same formula as the guard above).
+// Returns 1.0 when all query tokens match whole title tokens; for each token
+// that only matches as a substring of a longer title token, applies a 0.75
+// penalty factor. Both `query` and `title` should be normalised.
+export function tokenMatchConfidence(query: string, title: string): number {
+  const queryTokens = query.split(/\s+/).filter(Boolean);
+  const titleTokens = title.split(/\s+/).filter(Boolean);
+  if (queryTokens.length === 0 || titleTokens.length === 0) return 1.0;
+
+  let penalty = 1.0;
+  for (const q of queryTokens) {
+    const tolerance = q.length >= 5 ? Math.floor(q.length / 4) : 0;
+    let wholeMatch = false;
+    for (const t of titleTokens) {
+      if (levenshteinAtMost(q, t, tolerance) <= tolerance) {
+        wholeMatch = true;
+        break;
+      }
+    }
+    if (!wholeMatch) penalty *= 0.75;
+  }
+  return penalty;
+}
+
 export function emptyToNull(val: string): string | null {
   return val === '' ? null : val;
 }
@@ -106,6 +131,7 @@ export function formatPlayTime(seconds: number): { seconds: number; hours: numbe
 export function compactResult(
   game: Game,
   confidence?: number,
+  exactMatch?: boolean,
 ): {
   id: string;
   title: string;
@@ -113,6 +139,7 @@ export function compactResult(
   installed: boolean;
   playTime: { seconds: number; hours: number };
   confidence?: number;
+  exactMatch?: boolean;
 } {
   const result: {
     id: string;
@@ -121,6 +148,7 @@ export function compactResult(
     installed: boolean;
     playTime: { seconds: number; hours: number };
     confidence?: number;
+    exactMatch?: boolean;
   } = {
     id: game.ID,
     title: game.Title,
@@ -129,6 +157,7 @@ export function compactResult(
     playTime: formatPlayTime(game.PlayTime),
   };
   if (confidence !== undefined) result.confidence = confidence;
+  if (exactMatch) result.exactMatch = true;
   return result;
 }
 

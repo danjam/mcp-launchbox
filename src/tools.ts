@@ -4,7 +4,7 @@ export const tools = [
   {
     name: 'search_games',
     description:
-      'Search the library by title and series. Confidence: 1.0 = perfect, ≥0.85 = very likely, ≥0.65 = probable, <0.65 = speculative. Use id with get_game_details.',
+      'Search the library by title and series. Confidence: 1.0 = perfect, ≥0.85 = very likely, ≥0.65 = probable, <0.65 = speculative. Results include exactMatch: true when the normalised query equals the normalised title. Use id with get_game_details.',
     inputSchema: {
       type: 'object',
       properties: {

@@ -79,7 +79,7 @@ Replace `/path/to/mcp-launchbox` with the actual path where you cloned the proje
 
 Search the game library by title. Uses fuzzy matching across title and series fields. Punctuation (dashes, colons, `&`/`and`) is normalised before matching by default.
 
-Confidence scale: 1.0 = perfect match, ≥0.85 = very likely, ≥0.65 = probable, <0.65 = speculative. Use `get_game_details` for full metadata.
+Confidence scale: 1.0 = perfect match, ≥0.85 = very likely, ≥0.65 = probable, <0.65 = speculative. Confidence is penalised when a query token only matches as a substring of a title token (e.g. "Doom" matching "Doomblade"). Results include `exactMatch: true` when the normalised query equals the normalised title. Use `get_game_details` for full metadata.
 
 Tool: `search_games`
 

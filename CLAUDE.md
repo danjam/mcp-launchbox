@@ -68,6 +68,7 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 - `playTime` is always `{seconds, hours}` (hours rounded to 1 decimal)
 - `get_game_details` returns camelCase keys, `genres` as an array (split from semicolons), empty strings as `null`, `versions` array when alternate versions exist
 - `source` only reflects the import origin of the primary entry — `versions` shows all owned storefronts/variants
+- `search_games` results include `exactMatch: true` when the normalised query equals the normalised title; confidence is penalised when a query token only matches as a substring of a title token (e.g. "Doom" → "Doomblade" gets ~0.75x penalty)
 - `search_games` and `check_library` accept an optional `exact` param for exact title-map matching only — no fuzzy search, no normalisation, no prefix fallback
 - `check_library` runs an input validation pipeline before processing: trim whitespace → filter empties → case-insensitive dedupe (lowercase comparison, not `normaliseTitle`) → truncate to internal cap. Skipped titles are reported in `summary.skipped` with counts by reason (`empty`, `duplicate`, `overflow`); the object is omitted when nothing was skipped. `summary.total` reflects titles actually processed after all filtering.
 - `check_library` includes `nearMisses` (up to 5 candidates) when `matches` is empty; fuzzy nearMisses carry confidence 0.40–0.84, while a nearMiss with `prefixMatch: true` (no confidence field) means a shorter title exists — search the shorter title to confirm ownership
