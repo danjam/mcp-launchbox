@@ -243,7 +243,7 @@ export function createHandlers(
     if (args.status !== undefined && args.status !== null) {
       if (typeof args.status === 'string') {
         statusFilter = [args.status];
-      } else if (Array.isArray(args.status) && args.status.every((s) => typeof s === 'string')) {
+      } else if (Array.isArray(args.status) && args.status.length > 0 && args.status.every((s) => typeof s === 'string')) {
         statusFilter = args.status as string[];
       } else {
         return fail('status must be a string or array of strings');
