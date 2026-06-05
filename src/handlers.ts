@@ -147,12 +147,13 @@ export function createHandlers(
         | { title: string; platform: string; shorterTitle: true }
       )[] = [];
 
+      const MAX_MATCHES = 25;
       for (const r of fuzzyResults) {
         const confidence = fuseConfidence(r.score ?? 0);
         if (confidence < NEAR_MISS_FLOOR) continue;
         const titleNorm = normaliseTitle(r.item.Title);
         if (confidence >= CONFIDENCE_THRESHOLD && passesTokenBoundaryGuard(normalisedQuery, titleNorm)) {
-          matches.push(compactResult(r.item, confidence));
+          if (matches.length < MAX_MATCHES) matches.push(compactResult(r.item, confidence));
         } else if (nearMisses.length < 5) {
           nearMisses.push({ title: r.item.Title, platform: r.item.Platform, confidence });
         }
