@@ -85,10 +85,10 @@ Tool: `search_games`
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `query` | string | Yes | Search text to match against titles and series |
-| `platform` | string | No | Filter by platform name |
-| `limit` | number | No | Max results to return (default 25) |
-| `exact` | boolean | No | Disable punctuation normalisation (default false) |
+| `query` | string | Yes | Game title or series |
+| `platform` | string | No | Platform (e.g. 'Windows', 'Arcade') |
+| `limit` | number | No | Max results (default 25) |
+| `exact` | boolean | No | Skip normalisation (dashes, colons, &→and) |
 
 ### Check Library
 
@@ -102,10 +102,10 @@ Tool: `check_library`
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `games` | string[] | Yes | Array of game title strings to look up |
-| `platform` | string | No | Filter matches to a specific platform |
-| `limit` | number | No | Max titles to process (default 100) |
-| `exact` | boolean | No | Disable punctuation normalisation (default false) |
+| `games` | string[] | Yes | Game titles to look up |
+| `platform` | string | No | Platform (e.g. 'Windows', 'Arcade') |
+| `limit` | number | No | Max input titles to check (default 100) |
+| `exact` | boolean | No | Skip normalisation (dashes, colons, &→and) |
 
 ### Get Game Details
 
@@ -117,8 +117,8 @@ Tool: `get_game_details`
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `id` | string | Yes | The game ID (UUID from search results) |
-| `include_notes` | boolean | No | Include the Notes field (default false) |
+| `id` | string | Yes | Game ID from search results |
+| `include_notes` | boolean | No | Include notes (default false) |
 
 ### List Games
 
@@ -128,13 +128,13 @@ Tool: `list_games`
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `platform` | string | No | Filter by platform name |
-| `installed` | boolean | No | Filter by installed status |
-| `favorite` | boolean | No | Filter by favorite status |
-| `status` | string \| string[] | No | Filter by progress status (exact match, OR logic for arrays) |
-| `sort` | string | No | Sort order: `title` (default), `dateAdded`, `lastPlayed`, `playTime` |
-| `limit` | number | No | Max results to return (default 25) |
-| `offset` | number | No | Number of results to skip for pagination (default 0) |
+| `platform` | string | No | Platform (e.g. 'Windows', 'Arcade') |
+| `installed` | boolean | No | true = installed only, false = uninstalled only, omit = all |
+| `favorite` | boolean | No | true = favorites only, false = non-favorites only, omit = all |
+| `status` | string \| string[] | No | Progress status (OR logic for arrays) |
+| `sort` | string | No | Sort order; default "title". dateAdded/lastPlayed: most recent first; playTime: most played first |
+| `limit` | number | No | Max results (default 25) |
+| `offset` | number | No | Results to skip (default 0) |
 
 ### List Platforms
 
@@ -161,10 +161,10 @@ Tool: `random_game`
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `platform` | string | No | Filter by platform name |
-| `installed` | boolean | No | Filter by installed status |
-| `favorite` | boolean | No | Filter by favorite status |
-| `status` | string \| string[] | No | Filter by progress status (exact match, OR logic for arrays) |
+| `platform` | string | No | Platform (e.g. 'Windows', 'Arcade') |
+| `installed` | boolean | No | true = installed only, false = uninstalled only, omit = all |
+| `favorite` | boolean | No | true = favorites only, false = non-favorites only, omit = all |
+| `status` | string \| string[] | No | Progress status (OR logic for arrays) |
 
 ### Get Stats
 
