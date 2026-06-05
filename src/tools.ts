@@ -23,7 +23,7 @@ export const tools = [
   {
     name: 'check_library',
     description:
-      'Batch-check which games from a list are in the library — use instead of calling search_games per title. Only matches with confidence ≥0.85 count. When no match is found, nearMisses lists up to 5 candidates — confidence 0 means a shorter version of the title exists (search the head title to confirm). Results exclude storefront/version info — use get_game_details for that. Omit platform to check across all platforms (recommended for bundles).',
+      'Batch-check which games from a list are in the library — use instead of calling search_games per title. Only matches with confidence ≥0.85 count. When no match is found, nearMisses lists up to 5 candidates — nearMisses with `prefixMatch: true` indicate a shorter version of the title exists (search the shorter title to confirm). Results exclude storefront/version info — use get_game_details for that. Omit platform to check across all platforms (recommended for bundles).',
     inputSchema: {
       type: 'object',
       properties: {

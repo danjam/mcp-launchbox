@@ -69,7 +69,7 @@ This is a **Model Context Protocol (MCP) server** that wraps a local LaunchBox g
 - `get_game_details` returns camelCase keys, `genres` as an array (split from semicolons), empty strings as `null`, `versions` array when alternate versions exist
 - `source` only reflects the import origin of the primary entry — `versions` shows all owned storefronts/variants
 - `search_games` and `check_library` accept an optional `exact` param to disable punctuation normalisation
-- `check_library` includes `nearMisses` (up to 5 candidates with confidence 0.40–0.84) when `matches` is empty; a nearMiss with confidence 0 means a shorter title exists — search the head title to confirm ownership
+- `check_library` includes `nearMisses` (up to 5 candidates) when `matches` is empty; fuzzy nearMisses carry confidence 0.40–0.84, while a nearMiss with `prefixMatch: true` (no confidence field) means a shorter title exists — search the shorter title to confirm ownership
 - `check_library` results don't include storefront/version info — use `get_game_details` for that
 - `list_games` returns `{ total, results }` where results are compact game objects without confidence but with `dateAdded` and `lastPlayedDate` fields; supports filters (`platform`, `installed`, `favorite`, `status`), sort (`title`, `dateAdded`, `lastPlayedDate`, `playTime`), and pagination (`limit`, `offset`)
 - `list_games` `status` filter accepts a string or array of strings (OR logic); matches against `game.Progress` exactly

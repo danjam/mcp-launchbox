@@ -654,7 +654,8 @@ describe('check_library', () => {
       assert.equal(entry.matches.length, 0);
       assert.ok(entry.nearMisses.length > 0, 'exact mode should still surface prefix nearMiss');
       assert.equal(entry.nearMisses[0].title, 'Behind the Frame');
-      assert.equal(entry.nearMisses[0].confidence, 0);
+      assert.equal(entry.nearMisses[0].prefixMatch, true);
+      assert.equal(entry.nearMisses[0].confidence, undefined);
     }
   });
 
@@ -677,20 +678,25 @@ describe('check_library', () => {
       assert.equal(entry.matches.length, 0);
       assert.ok(entry.nearMisses.length > 0, 'expected prefix fallback nearMiss');
       assert.equal(entry.nearMisses[0].title, 'Behind the Frame');
-      assert.equal(entry.nearMisses[0].confidence, 0);
+      assert.equal(entry.nearMisses[0].prefixMatch, true);
+      assert.equal(entry.nearMisses[0].confidence, undefined);
       assert.equal(parsed.summary.owned, 0);
       assert.equal(parsed.summary.new, 1);
     }
   });
 
-  it('does not run prefix fallback when fuzzy nearMisses exist', async () => {
+  it('includes both fuzzy nearMisses and prefix hits when both exist', async () => {
+    // "Half-Life 3" should get fuzzy nearMisses for "Half-Life 2" (confidence-based)
+    // but no prefix hit because "Half-Life 3" tokens don't match a shorter title exactly
     const result = await handlers.check_library({ games: ['Half-Life 3'] });
     assert.equal(result.ok, true);
     if (result.ok) {
       const parsed = JSON.parse(result.text);
       const entry = parsed.results[0];
       assert.ok(entry.nearMisses.length > 0);
-      assert.ok(entry.nearMisses.every((n) => n.confidence > 0), 'should be Fuse nearMisses, not prefix');
+      const fuzzy = entry.nearMisses.filter((n) => 'confidence' in n);
+      assert.ok(fuzzy.length > 0, 'should have fuzzy nearMisses');
+      assert.ok(fuzzy.every((n) => n.confidence >= 0.4), 'fuzzy nearMisses should have confidence >= 0.4');
     }
   });
 
@@ -705,6 +711,65 @@ describe('check_library', () => {
       const entry = parsed.results[0];
       assert.equal(entry.matches.length, 0);
       assert.deepEqual(entry.nearMisses, []);
+    }
+  });
+
+  it('caps nearMisses at 5 across fuzzy and prefix types', async () => {
+    // Build a library with enough games to produce >5 nearMisses
+    const games = [];
+    for (let i = 0; i < 6; i++) {
+      games.push({
+        ID: `near-${i}`, Title: `Zork ${i + 1}`, Platform: 'Windows',
+        Developer: '', Publisher: '', Genre: '', ReleaseDate: '',
+        Notes: '', Source: '', Series: '', PlayMode: '', Rating: '',
+        MaxPlayers: '', CommunityStarRating: 0, StarRating: 0, Status: '',
+        Favorite: false, DatabaseID: '', Hide: false, Broken: false,
+        PlayCount: 0, PlayTime: 0, LastPlayedDate: '', DateAdded: '',
+        Installed: false, Completed: false, Progress: '',
+      });
+    }
+    // Add a prefix-matchable title
+    games.push({
+      ID: 'prefix-1', Title: 'Zork', Platform: 'Windows',
+      Developer: '', Publisher: '', Genre: '', ReleaseDate: '',
+      Notes: '', Source: '', Series: '', PlayMode: '', Rating: '',
+      MaxPlayers: '', CommunityStarRating: 0, StarRating: 0, Status: '',
+      Favorite: false, DatabaseID: '', Hide: false, Broken: false,
+      PlayCount: 0, PlayTime: 0, LastPlayedDate: '', DateAdded: '',
+      Installed: false, Completed: false, Progress: '',
+    });
+
+    const gamesById = new Map(games.map((g) => [g.ID, g]));
+    const gamesByTitle = new Map();
+    const gamesByNormalisedTitle = new Map();
+    for (const g of games) {
+      const key = g.Title.toLowerCase();
+      let list = gamesByTitle.get(key);
+      if (!list) { list = []; gamesByTitle.set(key, list); }
+      list.push(g);
+      const nKey = normaliseTitle(g.Title);
+      let nList = gamesByNormalisedTitle.get(nKey);
+      if (!nList) { nList = []; gamesByNormalisedTitle.set(nKey, nList); }
+      nList.push(g);
+    }
+    const fuse = new Fuse(games, FUSE_OPTIONS);
+    const fuseTitleOnly = new Fuse(games, FUSE_TITLE_ONLY_OPTIONS);
+    const lib = {
+      gamesById, gamesByTitle, gamesByNormalisedTitle, games, versionsByGameId: new Map(),
+      fuse, fuseTitleOnly, platformFuse: new Map(), platformFuseTitleOnly: new Map(),
+      platformCounts: sortedPlatformCounts(games), duplicateGroups: [], distinctStatuses: [],
+    };
+    const state = { library: lib };
+    const handlers = createHandlers(state, async () => {});
+
+    // Query "Zork: Subtitle" — fuzzy should find Zork 1-6 as nearMisses,
+    // prefix should find "Zork" — but total must be capped at 5
+    const result = await handlers.check_library({ games: ['Zork: The Subtitle'] });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.text);
+      const entry = parsed.results[0];
+      assert.ok(entry.nearMisses.length <= 5, `nearMisses should be capped at 5, got ${entry.nearMisses.length}`);
     }
   });
 });
