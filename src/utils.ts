@@ -26,8 +26,8 @@ export function asString(val: unknown): string | undefined | ToolResult {
 }
 
 export function requireString(name: string, val: unknown): string | ToolResult {
-  if (typeof val === 'string' && val !== '') return val;
-  return fail(`${name} is required (string)`);
+  if (typeof val === 'string' && val.trim() !== '') return val;
+  return fail(`${name} is required (non-empty string)`);
 }
 
 export function normaliseTitle(title: string): string {
