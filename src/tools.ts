@@ -4,7 +4,7 @@ export const tools = [
   {
     name: 'search_games',
     description:
-      'Search the library by title and series. Confidence: 1.0 = perfect, ≥0.85 = very likely, ≥0.65 = probable, <0.65 = speculative. Results include exactMatch: true when the normalised query equals the normalised title. Use id with get_game_details.',
+      'Search the library by title and series. Confidence: 1.0 = perfect, ≥0.85 = very likely, ≥0.65 = probable, <0.65 = speculative. Results include exactMatch: true when the query equals the title after normalisation (case-folded, dashes/colons/& stripped). Use id with get_game_details.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -23,7 +23,7 @@ export const tools = [
   {
     name: 'check_library',
     description:
-      'Batch-check which games from a list are in the library — use instead of calling search_games per title. Only matches with confidence ≥0.85 count. When no match is found, nearMisses lists up to 5 candidates — nearMisses with `prefixMatch: true` indicate a shorter version of the title exists (search the shorter title to confirm). Results exclude storefront/version info — use get_game_details for that. Omit platform to check across all platforms (recommended for bundles).',
+      'Batch-check which games from a list are in the library — use instead of calling search_games per title. Only matches with confidence ≥0.85 count. When no match is found, nearMisses lists up to 5 candidates — nearMisses with `shorterTitle: true` indicate a shorter version of the title exists (search the shorter title to confirm). Results exclude storefront/version info — use get_game_details for that. Omit platform to check across all platforms (recommended for bundles).',
     inputSchema: {
       type: 'object',
       properties: {
