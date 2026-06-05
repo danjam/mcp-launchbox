@@ -104,7 +104,7 @@ Tool: `check_library`
 |-----------|------|----------|-------------|
 | `games` | string[] | Yes | Game titles to look up |
 | `platform` | string | No | Platform (e.g. 'Windows', 'Arcade') |
-| `limit` | number | No | Max input titles to check (default 100) |
+| `maxTitles` | number | No | Max input titles to check (default 100) |
 | `exact` | boolean | No | Skip normalisation (dashes, colons, &→and) |
 
 ### Get Game Details
