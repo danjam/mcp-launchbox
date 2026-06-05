@@ -34,7 +34,7 @@ export const tools = [
           description: 'Game titles to look up',
         },
         platform: { type: 'string', description: "Platform (e.g. 'Windows', 'Arcade')" },
-        limit: { type: 'integer', description: 'Max input titles to check (default 100)' },
+        maxTitles: { type: 'integer', description: 'Max input titles to check (default 100)' },
         exact: {
           type: 'boolean',
           description: 'Skip normalisation (dashes, colons, &→and)',
@@ -80,7 +80,8 @@ export const tools = [
         sort: {
           type: 'string',
           enum: ['title', 'dateAdded', 'lastPlayed', 'playTime'],
-          description: 'Sort order; default "title". dateAdded/lastPlayed: most recent first; playTime: most played first',
+          description:
+            'Sort order; default "title". dateAdded/lastPlayed: most recent first; playTime: most played first',
         },
         status: {
           oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
