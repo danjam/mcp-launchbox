@@ -459,7 +459,7 @@ describe('random_game', () => {
       assert.ok(parsed.game.title);
       assert.ok(parsed.game.platform);
       assert.ok('dateAdded' in parsed.game);
-      assert.ok('lastPlayed' in parsed.game);
+      assert.ok('lastPlayedDate' in parsed.game);
       assert.equal(parsed.matchPool, 4);
     }
   });

@@ -79,8 +79,9 @@ export const tools = [
         favorite: { type: 'boolean', description: 'true = favorites only, false = non-favorites only, omit = all' },
         sort: {
           type: 'string',
-          enum: ['title', 'dateAdded', 'lastPlayed', 'playTime'],
-          description: 'Sort order; default "title". dateAdded/lastPlayed: most recent first; playTime: most played first',
+          enum: ['title', 'dateAdded', 'lastPlayedDate', 'playTime'],
+          description:
+            'Sort order; default "title". dateAdded/lastPlayedDate: most recent first; playTime: most played first',
         },
         status: {
           oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],

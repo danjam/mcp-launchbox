@@ -225,7 +225,7 @@ export function createHandlers(
     if (offset === undefined) return fail(`offset must be a non-negative integer, got: ${offsetVal}`);
     const sort = asString(args.sort);
     if (typeof sort === 'object') return sort;
-    const validSorts = ['title', 'dateAdded', 'lastPlayed', 'playTime'] as const;
+    const validSorts = ['title', 'dateAdded', 'lastPlayedDate', 'playTime'] as const;
     if (sort && !validSorts.includes(sort as (typeof validSorts)[number]))
       return fail(`sort must be one of: ${validSorts.join(', ')}`);
     const sortKey = (sort ?? 'title') as (typeof validSorts)[number];
@@ -237,7 +237,7 @@ export function createHandlers(
       switch (sortKey) {
         case 'dateAdded':
           return (b.DateAdded || '').localeCompare(a.DateAdded || '');
-        case 'lastPlayed':
+        case 'lastPlayedDate':
           return (b.LastPlayedDate || '').localeCompare(a.LastPlayedDate || '');
         case 'playTime':
           return b.PlayTime - a.PlayTime;
@@ -250,7 +250,7 @@ export function createHandlers(
     const items = page.map((g) => ({
       ...compactResult(g),
       dateAdded: emptyToNull(g.DateAdded),
-      lastPlayed: emptyToNull(g.LastPlayedDate),
+      lastPlayedDate: emptyToNull(g.LastPlayedDate),
     }));
 
     return ok(JSON.stringify({ total: filtered.length, results: items }));
@@ -319,7 +319,7 @@ export function createHandlers(
     const game = {
       ...compactResult(pick),
       dateAdded: emptyToNull(pick.DateAdded),
-      lastPlayed: emptyToNull(pick.LastPlayedDate),
+      lastPlayedDate: emptyToNull(pick.LastPlayedDate),
     };
     return ok(JSON.stringify({ game, matchPool: filtered.length }));
   }
